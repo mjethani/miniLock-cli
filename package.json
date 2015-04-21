@@ -1,6 +1,6 @@
 {
   "name": "mlck",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "miniLock CLI",
   "author": {
     "name": "Manish Jethani",
@@ -10,9 +10,6 @@
   "main": "main.js",
   "bin": {
     "mlck": "./mlck"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "encryption"
