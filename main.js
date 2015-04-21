@@ -13,7 +13,7 @@ var zxcvbn    = require('zxcvbn');
 var help = 'usage: mlck id <email> [--passphrase=<passphrase>]\n'
          + '       mlck encrypt [<id> ...]\n'
          + '                    --email=<email> [--passphrase=<passphrase>]\n'
-         + '                    --file=<file>\n';
+         + '                    --file=<file> [--output-file=<output-file>]\n';
 
 function sliceArguments(begin, end) {
   return Array.prototype.slice.call(sliceArguments.caller.arguments,
@@ -302,7 +302,7 @@ function makeHeader(ids, senderInfo, fileInfo) {
   return JSON.stringify(header);
 }
 
-function encryptFile(ids, email, passphrase, file, callback) {
+function encryptFile(ids, email, passphrase, file, outputFile, callback) {
   generateId(email, passphrase, function (error, fromId, keyPair) {
     if (error) {
       callback(error);
@@ -356,14 +356,17 @@ function encryptFile(ids, email, passphrase, file, callback) {
       },
       new Buffer(0));
 
+      var filename = typeof outputFile === 'string' ? outputFile
+        : file + '.minilock';
+
       try {
-        writeOutput(output, file + '.minilock');
+        writeOutput(output, filename);
       } catch (error) {
         callback(error);
         return;
       }
 
-      callback(null, output.length);
+      callback(null, output.length, filename);
     });
   });
 }
@@ -411,6 +414,7 @@ function handleEncryptCommand() {
     'email':           null,
     'passphrase':      null,
     'file':            null,
+    'output-file':     null,
   };
 
   var shortcuts = {};
@@ -427,6 +431,7 @@ function handleEncryptCommand() {
   var passphrase = options.passphrase;
 
   var file = options.file;
+  var outputFile = options['output-file'];
 
   if (typeof email !== 'string' || typeof file !== 'string') {
     printUsage();
@@ -439,15 +444,14 @@ function handleEncryptCommand() {
       die();
     }
 
-    encryptFile(ids, email, passphrase, file, function (error, length) {
+    encryptFile(ids, email, passphrase, file, outputFile,
+        function (error, length, filename) {
       if (error) {
         logError(error);
         die();
       }
 
-      if (!isNaN(length)) {
-        console.log(length + ' bytes');
-      }
+      console.log('Wrote ' + length + ' bytes to ' + filename);
     });
   });
 }
