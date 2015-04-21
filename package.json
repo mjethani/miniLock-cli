@@ -24,7 +24,7 @@
     "bs58": "^2.0.1",
     "scrypt-async": "^1.0.1",
     "tweetnacl": "^0.13.1",
-    "zxcvbn": "^1.0.0"
+    "zxcvbn": "git://github.com/dropbox/zxcvbn.git"
   },
   "license": "ISC"
 }

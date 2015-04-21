@@ -7,8 +7,7 @@ var BLAKE2s   = require('blake2s-js');
 var Base58    = require('bs58');
 var nacl      = require('tweetnacl');
 var scrypt    = require('scrypt-async');
-
-var zxcvbn    = require('./lib/zxcvbn').zxcvbn;
+var zxcvbn    = require('zxcvbn');
 
 var help = 'usage: mlck id <email> [--passphrase=<passphrase>]\n';
 
