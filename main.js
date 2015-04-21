@@ -13,7 +13,8 @@ var zxcvbn    = require('zxcvbn');
 var help = 'usage: mlck id <email> [--passphrase=<passphrase>]\n'
          + '       mlck encrypt [<id> ...] [--self]\n'
          + '                    --email=<email> [--passphrase=<passphrase>]\n'
-         + '                    --file=<file> [--output-file=<output-file>]\n';
+         + '                    --file=<file> [--output-file=<output-file>]\n'
+         + '                    [--anonymous]\n';
 
 function sliceArguments(begin, end) {
   return Array.prototype.slice.call(sliceArguments.caller.arguments,
@@ -303,7 +304,12 @@ function makeHeader(ids, senderInfo, fileInfo) {
 }
 
 function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
-    callback) {
+    anonymous, callback) {
+  if (anonymous) {
+    email = 'Anonymous';
+    passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
+  }
+
   generateId(email, passphrase, function (error, fromId, keyPair) {
     if (error) {
       callback(error);
@@ -418,6 +424,7 @@ function handleEncryptCommand() {
     'file':            null,
     'output-file':     null,
     'self':            false,
+    'anonymous':       false,
   };
 
   var shortcuts = {};
@@ -438,19 +445,21 @@ function handleEncryptCommand() {
 
   var includeSelf = options['self'];
 
-  if (typeof email !== 'string' || typeof file !== 'string') {
+  var anonymous = options.anonymous;
+
+  if ((!anonymous && typeof email !== 'string') || typeof file !== 'string') {
     printUsage();
     die();
   }
 
-  readPassphrase(passphrase, function (error, passphrase) {
+  readPassphrase(anonymous ? '' : passphrase, function (error, passphrase) {
     if (error) {
       logError(error);
       die();
     }
 
     encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
-        function (error, length, filename) {
+        anonymous, function (error, length, filename) {
       if (error) {
         logError(error);
         die();
