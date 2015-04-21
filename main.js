@@ -310,11 +310,8 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
   }
 
-  generateId(email, passphrase, function (error, fromId, keyPair) {
-    if (error) {
-      callback(error);
-      return;
-    }
+  getKeyPair(passphrase, email, function (keyPair) {
+    var fromId = miniLockId(keyPair.publicKey);
 
     var senderInfo = {
       id: fromId,
