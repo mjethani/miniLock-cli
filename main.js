@@ -11,7 +11,7 @@ var scrypt    = require('scrypt-async');
 var zxcvbn    = require('zxcvbn');
 
 var help = 'usage: mlck id <email> [--passphrase=<passphrase>]\n'
-         + '       mlck encrypt [<id> ...]\n'
+         + '       mlck encrypt [<id> ...] [--self]\n'
          + '                    --email=<email> [--passphrase=<passphrase>]\n'
          + '                    --file=<file> [--output-file=<output-file>]\n';
 
@@ -302,7 +302,8 @@ function makeHeader(ids, senderInfo, fileInfo) {
   return JSON.stringify(header);
 }
 
-function encryptFile(ids, email, passphrase, file, outputFile, callback) {
+function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
+    callback) {
   generateId(email, passphrase, function (error, fromId, keyPair) {
     if (error) {
       callback(error);
@@ -341,7 +342,8 @@ function encryptFile(ids, email, passphrase, file, outputFile, callback) {
         fileHash: nacl.util.encodeBase64(hashObject.digest())
       };
 
-      var header = makeHeader(ids, senderInfo, fileInfo);
+      var header = makeHeader(includeSelf ? ids.concat(fromId) : ids,
+          senderInfo, fileInfo);
 
       var headerLength = new Buffer(4);
       headerLength.writeUInt32LE(header.length);
@@ -415,6 +417,7 @@ function handleEncryptCommand() {
     'passphrase':      null,
     'file':            null,
     'output-file':     null,
+    'self':            false,
   };
 
   var shortcuts = {};
@@ -433,6 +436,8 @@ function handleEncryptCommand() {
   var file = options.file;
   var outputFile = options['output-file'];
 
+  var includeSelf = options['self'];
+
   if (typeof email !== 'string' || typeof file !== 'string') {
     printUsage();
     die();
@@ -444,7 +449,7 @@ function handleEncryptCommand() {
       die();
     }
 
-    encryptFile(ids, email, passphrase, file, outputFile,
+    encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         function (error, length, filename) {
       if (error) {
         logError(error);
