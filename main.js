@@ -374,7 +374,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         return;
       }
 
-      callback(null, output.length, filename);
+      callback(null, fromId, output.length, filename);
     });
   });
 }
@@ -412,7 +412,13 @@ function handleIdCommand() {
         die();
       }
 
-      console.log(id);
+      if (process.stdout.isTTY) {
+        console.log();
+        console.log('Your miniLock ID: ' + id + '.');
+        console.log();
+      } else {
+        console.log(id);
+      }
     });
   });
 }
@@ -459,13 +465,19 @@ function handleEncryptCommand() {
     }
 
     encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
-        anonymous, function (error, length, filename) {
+        anonymous, function (error, fromId, length, filename) {
       if (error) {
         logError(error);
         die();
       }
 
-      console.log('Wrote ' + length + ' bytes to ' + filename);
+      if (process.stdout.isTTY) {
+        console.log();
+        console.log('Encrypted from ' + fromId + '.');
+        console.log();
+        console.log('Wrote ' + length + ' bytes to ' + filename);
+        console.log();
+      }
     });
   });
 }
