@@ -12,6 +12,18 @@ var zxcvbn    = require('./lib/zxcvbn').zxcvbn;
 
 var help = 'usage: mlck id <email>\n';
 
+function sliceArguments(begin, end) {
+  return Array.prototype.slice.call(sliceArguments.caller.arguments,
+      begin, end);
+}
+
+function async(func) {
+  var args = sliceArguments(1);
+  process.nextTick(function () {
+    func.apply(null, args);
+  });
+}
+
 function die() {
   if (arguments.length > 0) {
     console.error.apply(console, arguments);
@@ -24,6 +36,100 @@ function logError(error) {
   if (error) {
     console.error(error.toString());
   }
+}
+
+function parseArgs(args) {
+  // This is another cool function. It parses command line arguments of two
+  // kinds: '--long-name[=<value>]' and '-n [<value>]'
+  // 
+  // If the value is omitted, it's assumed to be a boolean true.
+  // 
+  // You can pass in default values and a mapping of short names to long names
+  // as the first and second arguments respectively.
+
+  var rest = sliceArguments(1);
+
+  var defaultOptions  = typeof rest[0] === 'object' && rest.shift() || {};
+  var shortcuts       = typeof rest[0] === 'object' && rest.shift() || {};
+
+  var expect = null;
+  var stop = false;
+
+  var obj = Object.create(defaultOptions);
+
+  obj = Object.defineProperty(obj, '...', { value: [] });
+  obj = Object.defineProperty(obj, '!?',  { value: [] });
+
+  // Preprocessing.
+  args = args.reduce(function (newArgs, arg) {
+    if (!stop) {
+      if (arg === '--') {
+        stop = true;
+
+      // Split '-xyz' into '-x', '-y', '-z'.
+      } else if (arg.length > 2 && arg[0] === '-' && arg[1] !== '-') {
+        arg = arg.slice(1).split('').map(function (v) { return '-' + v });
+      }
+    }
+
+    return newArgs.concat(arg);
+  },
+  []);
+
+  stop = false;
+
+  return args.reduce(function (obj, arg, index) {
+    var single = !stop && arg[0] === '-' && arg[1] !== '-';
+
+    if (!(single && !(arg = shortcuts[arg]))) {
+      if (!stop && arg.slice(0, 2) === '--') {
+        if (arg.length > 2) {
+          var eq = arg.indexOf('=');
+
+          if (eq === -1) {
+            eq = arg.length;
+          }
+
+          var name = arg.slice(2, eq);
+
+          if (!single && !defaultOptions.hasOwnProperty(name)) {
+            obj['!?'].push(arg.slice(0, eq));
+
+            return obj;
+          }
+
+          if (single && eq === arg.length - 1) {
+            obj[expect = name] = '';
+
+            return obj;
+          }
+
+          obj[name] = typeof defaultOptions[name] === 'boolean'
+              && eq === arg.length
+              || arg.slice(eq + 1);
+
+        } else {
+          stop = true;
+        }
+      } else if (expect) {
+        obj[expect] = arg;
+
+      } else if (rest.length > 0) {
+        obj[rest.shift()] = arg;
+
+      } else {
+        obj['...'].push(arg);
+      }
+
+    } else if (single) {
+      obj['!?'].push(args[index]);
+    }
+
+    expect = null;
+
+    return obj;
+  },
+  obj);
 }
 
 function prompt(label, quiet, callback) {
@@ -85,55 +191,99 @@ function getScryptKey(key, salt, callback) {
 function getKeyPair(key, salt, callback) {
   var keyHash = new BLAKE2s(32);
   keyHash.update(nacl.util.decodeUTF8(key));
-  salt = nacl.util.decodeUTF8(salt);
-  getScryptKey(keyHash.digest(), salt, function(keyBytes) {
-    if (typeof(callback) === 'function') {
-      callback(nacl.box.keyPair.fromSecretKey(keyBytes));
-    }
+
+  getScryptKey(keyHash.digest(), nacl.util.decodeUTF8(salt),
+      function(keyBytes) {
+    callback(nacl.box.keyPair.fromSecretKey(keyBytes));
   });
 }
 
-function getMiniLockId(publicKey) {
+function miniLockId(publicKey) {
   var id = new Uint8Array(33);
+
   for (var i = 0; i < publicKey.length; i++) {
     id[i] = publicKey[i];
   }
+
   var hash = new BLAKE2s(1);
   hash.update(publicKey);
+
   id[32] = hash.digest()[0];
+
   return Base58.encode(id);
 }
 
-function generateId(email, passphrase) {
+function readPassphrase(passphrase, callback) {
+  if (typeof passphrase === 'function') {
+    callback = passphrase;
+    passphrase = null;
+  }
+
+  if (typeof passphrase === 'string') {
+    async(function () {
+      callback(null, passphrase);
+    });
+  } else {
+    prompt('Passphrase: ', true, function (error, passphrase) {
+      callback(error, passphrase);
+    });
+  }
+}
+
+function generateId(email, passphrase, callback) {
+  if (!checkKeyStrength(passphrase)) {
+    async(function () {
+      callback('Passphrase too weak!');
+    });
+  }
+
+  getKeyPair(passphrase, email, function (keyPair) {
+    callback(null, miniLockId(keyPair.publicKey));
+  });
+}
+
+function handleId() {
+  var defaultOptions = {
+    'passphrase':      null,
+  };
+
+  var shortcuts = {};
+
+  var options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
+
+  if (options['!?'].length > 0) {
+    die("Unknown option '" + options['!?'][0] + "'.");
+  }
+
+  var email = options['...'][0];
+  var passphrase = options.passphrase;
+
   if (email === undefined) {
     printUsage();
     die();
   }
 
-  if (passphrase === undefined) {
-    prompt('Passphrase: ', true, function (error, passphrase) {
+  readPassphrase(passphrase, function (error, passphrase) {
+    if (error) {
+      logError(error);
+      die();
+    }
+
+    generateId(email, passphrase, function (error, id) {
       if (error) {
         logError(error);
         die();
       }
 
-      generateId(email, passphrase);
+      console.log(id);
     });
-  } else {
-    if (!checkKeyStrength(passphrase)) {
-      die('Passphrase too weak!');
-    }
-
-    getKeyPair(passphrase, email, function (keyPair) {
-      console.log(getMiniLockId(keyPair.publicKey));
-    });
-  }
+  });
 }
 
 function run() {
   switch (process.argv[2]) {
   case 'id':
-    generateId(process.argv[3]);
+    handleId();
     break;
   default:
     printUsage();
