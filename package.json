@@ -1,0 +1,32 @@
+{
+  "name": "mlck",
+  "version": "0.1.1",
+  "description": "miniLock CLI",
+  "author": {
+    "name": "Manish Jethani",
+    "email": "manish.jethani@gmail.com",
+    "url": "http://manishjethani.com/"
+  },
+  "main": "main.js",
+  "bin": {
+    "mlck": "./mlck"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "encryption"
+  ],
+  "preferGlobal": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mjethani/mlck.git"
+  },
+  "dependencies": {
+    "blake2s-js": "^1.0.3",
+    "bs58": "^2.0.1",
+    "scrypt-async": "^1.0.1",
+    "tweetnacl": "^0.13.1",
+    "zxcvbn": "^1.0.0"
+  }
+}
