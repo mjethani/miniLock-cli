@@ -10,7 +10,7 @@ var scrypt    = require('scrypt-async');
 
 var zxcvbn    = require('./lib/zxcvbn').zxcvbn;
 
-var help = 'usage: mlck id <email>\n';
+var help = 'usage: mlck id <email> [--passphrase=<passphrase>]\n';
 
 function sliceArguments(begin, end) {
   return Array.prototype.slice.call(sliceArguments.caller.arguments,
