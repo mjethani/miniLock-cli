@@ -356,7 +356,12 @@ function encryptFile(ids, email, passphrase, file, callback) {
       },
       new Buffer(0));
 
-      writeOutput(output, file + '.minilock');
+      try {
+        writeOutput(output, file + '.minilock');
+      } catch (error) {
+        callback(error);
+        return;
+      }
 
       callback(null, output.length);
     });
