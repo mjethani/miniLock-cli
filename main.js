@@ -342,6 +342,23 @@ function readPassphrase(passphrase, minEntropy, callback) {
   }
 }
 
+function validateId(id) {
+  if (!/^[1-9ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{40,55}$/
+      .test(id)) {
+    return false;
+  }
+
+  var bytes = Base58.decode(id);
+  if (bytes.length !== 33) {
+    return false;
+  }
+
+  var hash = new BLAKE2s(1);
+  hash.update(bytes.slice(0, 32));
+
+  return hash.digest()[0] === bytes[32];
+}
+
 function generateId(email, passphrase, callback) {
   getKeyPair(passphrase, email, function (keyPair) {
     callback(null, miniLockId(keyPair.publicKey), keyPair);
@@ -631,6 +648,12 @@ function handleEncryptCommand() {
   var includeSelf = options['self'];
 
   var anonymous = options.anonymous;
+
+  ids.forEach(function (id) {
+    if (!validateId(id)) {
+      die(id + " doesn't look like a valid miniLock ID.");
+    }
+  });
 
   loadProfile();
 
