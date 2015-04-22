@@ -13,9 +13,9 @@ var zxcvbn    = require('zxcvbn');
 var debug = require('debug')('mlck');
 
 var help = 'usage: mlck id <email> [--passphrase=<passphrase>]\n'
-         + '       mlck encrypt [<id> ...] [--self]\n'
-         + '                    --email=<email> [--passphrase=<passphrase>]\n'
+         + '       mlck encrypt --email=<email> [<id> ...] [--self]\n'
          + '                    [--file=<file>] [--output-file=<output-file>]\n'
+         + '                    [--passphrase=<passphrase>]\n'
          + '                    [--anonymous]\n';
 
 function hex(data) {
