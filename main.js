@@ -15,7 +15,7 @@ var debug = require('debug')('mlck');
 var help = 'usage: mlck id <email> [--passphrase=<passphrase>]\n'
          + '       mlck encrypt [<id> ...] [--self]\n'
          + '                    --email=<email> [--passphrase=<passphrase>]\n'
-         + '                    --file=<file> [--output-file=<output-file>]\n'
+         + '                    [--file=<file>] [--output-file=<output-file>]\n'
          + '                    [--anonymous]\n';
 
 function hex(data) {
@@ -142,6 +142,36 @@ function parseArgs(args) {
   obj);
 }
 
+function slurp(encoding, callback) {
+  if (typeof encoding === 'function') {
+    callback = encoding;
+    encoding = null;
+  }
+
+  var input = '';
+
+  if (encoding) {
+    process.stdin.setEncoding(encoding);
+  } else {
+    input = new Buffer(0);
+  }
+
+  process.stdin.on('readable', function () {
+    var chunk = process.stdin.read();
+    if (chunk !== null) {
+      if (typeof input === 'string') {
+        input += chunk;
+      } else {
+        input = Buffer.concat([ input, chunk ]);
+      }
+    }
+  });
+
+  process.stdin.on('end', function () {
+    callback(null, input);
+  });
+}
+
 function slurpFile(filename, encoding, callback) {
   if (typeof encoding === 'function') {
     callback = encoding;
@@ -237,12 +267,20 @@ function miniLockId(publicKey) {
 }
 
 function readInput(filename, callback) {
-  slurpFile(filename, callback);
+  if (typeof filename === 'string') {
+    slurpFile(filename, callback);
+  } else {
+    slurp(callback);
+  }
 }
 
 function writeOutput(contents, filename) {
   if (contents != null) {
-    fs.writeFileSync(filename, contents);
+    if (typeof filename === 'string') {
+      fs.writeFileSync(filename, contents);
+    } else {
+      process.stdout.write(contents);
+    }
   }
 }
 
@@ -345,6 +383,10 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       secretKey: keyPair.secretKey
     };
 
+    if (typeof file !== 'string' && process.stdin.isTTY) {
+      console.error('Reading from stdin ...');
+    }
+
     readInput(file, function (error, contents) {
       if (error) {
         callback(error);
@@ -401,15 +443,24 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       new Buffer(0));
 
       var filename = typeof outputFile === 'string' ? outputFile
-        : file + '.minilock';
+        : typeof file === 'string' ? file + '.minilock'
+        : null;
 
-      debug("Writing to file " + filename);
+      if (typeof filename === 'string') {
+        debug("Writing to file " + filename);
+      } else if (!process.stdout.isTTY) {
+        debug("Writing to stdout");
+      }
 
-      try {
-        writeOutput(output, filename);
-      } catch (error) {
-        callback(error);
-        return;
+      if (typeof filename === 'string' || !process.stdout.isTTY) {
+        try {
+          writeOutput(output, filename);
+        } catch (error) {
+          callback(error);
+          return;
+        }
+      } else {
+        console.error('WARNING: Not writing output to terminal.');
       }
 
       debug("File encryption complete");
@@ -495,7 +546,7 @@ function handleEncryptCommand() {
 
   var anonymous = options.anonymous;
 
-  if ((!anonymous && typeof email !== 'string') || typeof file !== 'string') {
+  if (!anonymous && typeof email !== 'string') {
     printUsage();
     die();
   }
@@ -521,8 +572,11 @@ function handleEncryptCommand() {
         console.log();
         console.log('Encrypted from ' + fromId + '.');
         console.log();
-        console.log('Wrote ' + length + ' bytes to ' + filename);
-        console.log();
+
+        if (typeof filename === 'string') {
+          console.log('Wrote ' + length + ' bytes to ' + filename);
+          console.log();
+        }
       }
     });
   });
