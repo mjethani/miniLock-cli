@@ -8,8 +8,6 @@ usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]
                     [--passphrase=<passphrase>]
                     [--anonymous]
 
-$ mlck id alice@example.com --passphrase='The brown fox jumped over the dog'
-Passphrase too weak!
 $ mlck id alice@example.com --passphrase='The quick brown fox jumped over the lazy dog' --save
 
 Your miniLock ID: DtgoeFAZv34x9UXLdW6XuZaZeAmqV2WdSuTQXvWFm59QW.

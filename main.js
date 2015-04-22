@@ -252,14 +252,6 @@ function printUsage() {
   console.error(help);
 }
 
-function checkKeyStrength(key) {
-  var entropy = zxcvbn(key).entropy;
-
-  debug("Key entropy is " + entropy);
-
-  return entropy > 100;
-}
-
 function getScryptKey(key, salt, callback) {
   scrypt(key, salt, 17, 8, 32, 1000, function (keyBytes) {
     return callback(nacl.util.decodeBase64(keyBytes));
@@ -321,19 +313,30 @@ function readPassphrase(passphrase, callback) {
       callback(null, passphrase);
     });
   } else {
-    prompt('Passphrase: ', true, function (error, passphrase) {
-      callback(error, passphrase);
+    prompt('Passphrase (leave blank to quit): ', true,
+        function (error, passphrase) {
+      if (passphrase === '') {
+        die();
+      }
+
+      var entropy = zxcvbn(passphrase).entropy;
+
+      if (entropy < 100) {
+        console.log();
+        console.log('Entropy: ' + entropy + '/100');
+        console.log();
+        console.log("Let's try once more ...");
+        console.log();
+
+        readPassphrase(null, callback);
+      } else {
+        callback(error, passphrase);
+      }
     });
   }
 }
 
 function generateId(email, passphrase, callback) {
-  if (!checkKeyStrength(passphrase)) {
-    async(function () {
-      callback('Passphrase too weak!');
-    });
-  }
-
   getKeyPair(passphrase, email, function (keyPair) {
     callback(null, miniLockId(keyPair.publicKey), keyPair);
   });
