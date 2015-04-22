@@ -302,10 +302,16 @@ function writeOutput(contents, filename) {
   }
 }
 
-function readPassphrase(passphrase, callback) {
+function readPassphrase(passphrase, minEntropy, callback) {
+  var defaultMinEntropy = 100;
+
   if (typeof passphrase === 'function') {
     callback = passphrase;
+    minEntropy = defaultMinEntropy;
     passphrase = null;
+  } else if (typeof minEntropy === 'function') {
+    callback = minEntropy;
+    minEntropy = defaultMinEntropy;
   }
 
   if (typeof passphrase === 'string') {
@@ -321,9 +327,9 @@ function readPassphrase(passphrase, callback) {
 
       var entropy = zxcvbn(passphrase).entropy;
 
-      if (entropy < 100) {
+      if (entropy < minEntropy) {
         console.log();
-        console.log('Entropy: ' + entropy + '/100');
+        console.log('Entropy: ' + entropy + '/' + minEntropy);
         console.log();
         console.log("Let's try once more ...");
         console.log();
@@ -635,7 +641,7 @@ function handleEncryptCommand() {
     die('No passphrase given; no terminal available.');
   }
 
-  readPassphrase(anonymous ? '' : passphrase, function (error, passphrase) {
+  readPassphrase(anonymous ? '' : passphrase, 0, function (error, passphrase) {
     if (error) {
       logError(error);
       die();
