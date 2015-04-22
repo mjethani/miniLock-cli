@@ -20,6 +20,8 @@ var help = 'usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]\n
 
 var profile = null;
 
+var dictionary = null;
+
 function hex(data) {
   return new Buffer(data).toString('hex');
 }
@@ -248,6 +250,34 @@ function loadProfile() {
   }
 }
 
+function loadDictionary() {
+  var data = fs.readFileSync(path.resolve(__dirname, 'dictionary'),
+      { encoding: 'utf8' });
+
+  dictionary = data.split('\n').map(function (line) {
+    return line.replace(/^\s*|\s*$/g, '').replace(/^#.*/, '');
+  }).filter(function (line) {
+    return line !== '';
+  });
+}
+
+function randomPassphrase(entropy) {
+  if (!dictionary) {
+    loadDictionary();
+  }
+
+  var passphrase = '';
+
+  while (zxcvbn(passphrase).entropy < entropy) {
+    var randomNumber = new Buffer(nacl.randomBytes(2)).readUInt16BE();
+    var index = Math.floor((randomNumber / 0x10000) * dictionary.length);
+
+    passphrase += (passphrase && ' ' || '') + dictionary[index];
+  }
+
+  return passphrase;
+}
+
 function printUsage() {
   console.error(help);
 }
@@ -319,6 +349,10 @@ function readPassphrase(passphrase, minEntropy, callback) {
       callback(null, passphrase);
     });
   } else {
+    if (minEntropy) {
+      console.log(randomPassphrase(minEntropy), os.EOL);
+    }
+
     prompt('Passphrase (leave blank to quit): ', true,
         function (error, passphrase) {
       if (passphrase === '') {
