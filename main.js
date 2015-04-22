@@ -425,7 +425,7 @@ function makeHeader(ids, senderInfo, fileInfo) {
 }
 
 function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
-    anonymous, callback) {
+    anonymous, checkId, callback) {
   debug("Begin file encryption");
 
   if (anonymous) {
@@ -443,6 +443,11 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     var fromId = miniLockId(keyPair.publicKey);
 
     debug("Our miniLock ID is " + fromId);
+
+    if (!anonymous && checkId && fromId !== checkId) {
+      callback('ID check failed', fromId);
+      return;
+    }
 
     var senderInfo = {
       id: fromId,
@@ -641,6 +646,8 @@ function handleEncryptCommand() {
     die('No passphrase given; no terminal available.');
   }
 
+  var checkId = !anonymous && profile && email === profile.email && profile.id;
+
   readPassphrase(anonymous ? '' : passphrase, 0, function (error, passphrase) {
     if (error) {
       logError(error);
@@ -652,9 +659,13 @@ function handleEncryptCommand() {
     }
 
     encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
-        anonymous, function (error, fromId, length, filename) {
+        anonymous, checkId, function (error, fromId, length, filename) {
       if (error) {
-        logError(error);
+        if (checkId && fromId && fromId !== checkId) {
+          console.error('Incorrect passphrase for ' + email);
+        } else {
+          logError(error);
+        }
         die();
       }
 
