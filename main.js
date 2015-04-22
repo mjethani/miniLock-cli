@@ -12,11 +12,13 @@ var zxcvbn    = require('zxcvbn');
 
 var debug = require('debug')('mlck');
 
-var help = 'usage: mlck id <email> [--passphrase=<passphrase>]\n'
-         + '       mlck encrypt --email=<email> [<id> ...] [--self]\n'
+var help = 'usage: mlck id <email> [--passphrase=<passphrase>] [--save]\n'
+         + '       mlck encrypt [<id> ...] [--self] [--email=<email>]\n'
          + '                    [--file=<file>] [--output-file=<output-file>]\n'
          + '                    [--passphrase=<passphrase>]\n'
          + '                    [--anonymous]\n';
+
+var profile = null;
 
 function hex(data) {
   return new Buffer(data).toString('hex');
@@ -222,6 +224,30 @@ function prompt(label, quiet, callback) {
   });
 }
 
+function home() {
+  return process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
+}
+
+function loadProfile() {
+  var profileDirectory = path.resolve(home(), '.mlck');
+
+  var data = null;
+
+  try {
+    data = fs.readFileSync(path.resolve(profileDirectory, 'profile.json'),
+        { encoding: 'utf8' });
+  } catch (error) {
+  }
+
+  if (data) {
+    try {
+      profile = JSON.parse(data);
+    } catch (error) {
+      console.error('WARNING: Profile data is corrupt.');
+    }
+  }
+}
+
 function printUsage() {
   console.error(help);
 }
@@ -311,6 +337,27 @@ function generateId(email, passphrase, callback) {
   getKeyPair(passphrase, email, function (keyPair) {
     callback(null, miniLockId(keyPair.publicKey), keyPair);
   });
+}
+
+function saveId(email, id) {
+  var profileDirectory = path.resolve(home(), '.mlck');
+
+  try {
+    fs.mkdirSync(profileDirectory);
+  } catch (error) {
+    if (error.code !== 'EEXIST') {
+      throw error;
+    }
+  }
+
+  var profile = {
+    version: '0.1',
+    email: email,
+    id: id
+  };
+
+  fs.writeFileSync(path.resolve(profileDirectory, 'profile.json'),
+      JSON.stringify(profile));
 }
 
 function makeHeader(ids, senderInfo, fileInfo) {
@@ -473,6 +520,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 function handleIdCommand() {
   var defaultOptions = {
     'passphrase':      null,
+    'save':            false,
   };
 
   var shortcuts = {
@@ -487,6 +535,8 @@ function handleIdCommand() {
 
   var email = options['...'][0];
   var passphrase = options.passphrase;
+
+  var save = options.save;
 
   if (email === undefined) {
     printUsage();
@@ -505,6 +555,10 @@ function handleIdCommand() {
       if (error) {
         logError(error);
         die();
+      }
+
+      if (save) {
+        saveId(email, id);
       }
 
       if (process.stdout.isTTY) {
@@ -553,9 +607,14 @@ function handleEncryptCommand() {
 
   var anonymous = options.anonymous;
 
+  loadProfile();
+
+  if (typeof email !== 'string' && profile) {
+    email = profile.email;
+  }
+
   if (!anonymous && typeof email !== 'string') {
-    printUsage();
-    die();
+    die('Email required.');
   }
 
   if (!anonymous && typeof passphrase !== 'string' && !process.stdin.isTTY) {
