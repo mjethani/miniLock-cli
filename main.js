@@ -558,6 +558,10 @@ function handleEncryptCommand() {
     die();
   }
 
+  if (!anonymous && typeof passphrase !== 'string' && !process.stdin.isTTY) {
+    die('No passphrase given; no terminal available.');
+  }
+
   readPassphrase(anonymous ? '' : passphrase, function (error, passphrase) {
     if (error) {
       logError(error);
