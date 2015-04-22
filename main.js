@@ -10,11 +10,17 @@ var nacl_     = require('nacl-stream');
 var scrypt    = require('scrypt-async');
 var zxcvbn    = require('zxcvbn');
 
+var debug = require('debug')('mlck');
+
 var help = 'usage: mlck id <email> [--passphrase=<passphrase>]\n'
          + '       mlck encrypt [<id> ...] [--self]\n'
          + '                    --email=<email> [--passphrase=<passphrase>]\n'
          + '                    --file=<file> [--output-file=<output-file>]\n'
          + '                    [--anonymous]\n';
+
+function hex(data) {
+  return new Buffer(data).toString('hex');
+}
 
 function sliceArguments(begin, end) {
   return Array.prototype.slice.call(sliceArguments.caller.arguments,
@@ -191,7 +197,11 @@ function printUsage() {
 }
 
 function checkKeyStrength(key) {
-  return zxcvbn(key).entropy > 100;
+  var entropy = zxcvbn(key).entropy;
+
+  debug("Key entropy is " + entropy);
+
+  return entropy > 100;
 }
 
 function getScryptKey(key, salt, callback) {
@@ -273,9 +283,16 @@ function makeHeader(ids, senderInfo, fileInfo) {
     decryptInfo: {}
   };
 
+  debug("Ephemeral public key is " + hex(ephemeral.publicKey));
+  debug("Ephemeral secret key is " + hex(ephemeral.secretKey));
+
   ids.forEach(function (id, index) {
+    debug("Adding recipient " + id);
+
     var nonce = nacl.randomBytes(24);
     var publicKey = new Uint8Array(Base58.decode(id).slice(0, 32));
+
+    debug("Using nonce " + hex(nonce));
 
     var decryptInfo = {
       senderID: senderInfo.id,
@@ -305,13 +322,23 @@ function makeHeader(ids, senderInfo, fileInfo) {
 
 function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     anonymous, callback) {
+  debug("Begin file encryption");
+
   if (anonymous) {
     email = 'Anonymous';
     passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
   }
 
+  debug("Generating key pair with email " + email
+      + " and passphrase " + passphrase);
+
   getKeyPair(passphrase, email, function (keyPair) {
+    debug("Our public key is " + hex(keyPair.publicKey));
+    debug("Our secret key is " + hex(keyPair.secretKey));
+
     var fromId = miniLockId(keyPair.publicKey);
+
+    debug("Our miniLock ID is " + fromId);
 
     var senderInfo = {
       id: fromId,
@@ -327,6 +354,9 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       var fileKey   = nacl.randomBytes(32);
       var fileNonce = nacl.randomBytes(16);
 
+      debug("Using file key " + hex(fileKey));
+      debug("Using file nonce " + hex(fileNonce));
+
       var chunkSize = Math.max(256, contents.length);
 
       var encryptor = nacl_.stream.createEncryptor(fileKey, fileNonce,
@@ -335,14 +365,21 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 
       var encryptedChunk = encryptor.encryptChunk(new Uint8Array(contents),
           true);
+
+      debug("Encrypted chunk " + hex(encryptedChunk));
+
       encryptor.clean();
 
       hashObject.update(encryptedChunk);
 
+      var fileHash = hashObject.digest();
+
+      debug("File hash is " + hex(fileHash));
+
       var fileInfo = {
         fileKey: nacl.util.encodeBase64(fileKey),
         fileNonce: nacl.util.encodeBase64(fileNonce),
-        fileHash: nacl.util.encodeBase64(hashObject.digest())
+        fileHash: nacl.util.encodeBase64(fileHash)
       };
 
       var header = makeHeader(includeSelf ? ids.concat(fromId) : ids,
@@ -350,6 +387,8 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 
       var headerLength = new Buffer(4);
       headerLength.writeUInt32LE(header.length);
+
+      debug("Header length is " + hex(headerLength));
 
       var output = [
         'miniLock',
@@ -364,12 +403,16 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       var filename = typeof outputFile === 'string' ? outputFile
         : file + '.minilock';
 
+      debug("Writing to file " + filename);
+
       try {
         writeOutput(output, filename);
       } catch (error) {
         callback(error);
         return;
       }
+
+      debug("File encryption complete");
 
       callback(null, fromId, output.length, filename);
     });
@@ -402,6 +445,8 @@ function handleIdCommand() {
       logError(error);
       die();
     }
+
+    debug("Using passphrase " + passphrase);
 
     generateId(email, passphrase, function (error, id) {
       if (error) {
@@ -461,6 +506,10 @@ function handleEncryptCommand() {
       die();
     }
 
+    if (!anonymous) {
+      debug("Using passphrase " + passphrase);
+    }
+
     encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         anonymous, function (error, fromId, length, filename) {
       if (error) {
@@ -480,7 +529,9 @@ function handleEncryptCommand() {
 }
 
 function run() {
-  switch (process.argv[2]) {
+  var command = process.argv[2];
+
+  switch (command) {
   case 'id':
     handleIdCommand();
     break;
