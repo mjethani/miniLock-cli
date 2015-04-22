@@ -475,7 +475,9 @@ function handleIdCommand() {
     'passphrase':      null,
   };
 
-  var shortcuts = {};
+  var shortcuts = {
+    '-P': '--passphrase='
+  };
 
   var options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
 
@@ -526,7 +528,12 @@ function handleEncryptCommand() {
     'anonymous':       false,
   };
 
-  var shortcuts = {};
+  var shortcuts = {
+    '-e': '--email=',
+    '-P': '--passphrase=',
+    '-f': '--file=',
+    '-o': '--output-file='
+  };
 
   var options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
 
