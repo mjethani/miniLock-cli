@@ -12,7 +12,7 @@ var zxcvbn    = require('zxcvbn');
 
 var debug = require('debug')('mlck');
 
-var help = 'usage: mlck id <email> [--passphrase=<passphrase>] [--save]\n'
+var help = 'usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]\n'
          + '       mlck encrypt [<id> ...] [--self] [--email=<email>]\n'
          + '                    [--file=<file>] [--output-file=<output-file>]\n'
          + '                    [--passphrase=<passphrase>]\n'
@@ -339,6 +339,16 @@ function generateId(email, passphrase, callback) {
   });
 }
 
+function printId(id) {
+  if (process.stdout.isTTY) {
+    console.log();
+    console.log('Your miniLock ID: ' + id + '.');
+    console.log();
+  } else {
+    console.log(id);
+  }
+}
+
 function saveId(email, id) {
   var profileDirectory = path.resolve(home(), '.mlck');
 
@@ -539,8 +549,15 @@ function handleIdCommand() {
   var save = options.save;
 
   if (email === undefined) {
-    printUsage();
-    die();
+    loadProfile();
+
+    if (profile) {
+      printId(profile.id);
+    } else {
+      console.error('No profile data available.');
+    }
+
+    return;
   }
 
   readPassphrase(passphrase, function (error, passphrase) {
@@ -561,13 +578,7 @@ function handleIdCommand() {
         saveId(email, id);
       }
 
-      if (process.stdout.isTTY) {
-        console.log();
-        console.log('Your miniLock ID: ' + id + '.');
-        console.log();
-      } else {
-        console.log(id);
-      }
+      printId(id);
     });
   });
 }
