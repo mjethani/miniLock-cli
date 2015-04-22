@@ -1,6 +1,6 @@
 {
   "name": "mlck",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "miniLock CLI",
   "author": {
     "name": "Manish Jethani",
@@ -12,7 +12,8 @@
     "mlck": "./mlck"
   },
   "keywords": [
-    "encryption"
+    "encryption",
+    "minilock"
   ],
   "preferGlobal": true,
   "repository": {
