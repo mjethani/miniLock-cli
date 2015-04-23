@@ -2,6 +2,7 @@ var fs        = require('fs');
 var os        = require('os');
 var path      = require('path');
 var readline  = require('readline');
+var stream    = require('stream');
 
 var BLAKE2s   = require('blake2s-js');
 var Base58    = require('bs58');
@@ -18,9 +19,15 @@ var help = 'usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]\n
          + '                    [--passphrase=<passphrase>]\n'
          + '                    [--anonymous]\n';
 
+var ENCRYPTION_CHUNK_SIZE = 256;
+
 var profile = null;
 
 var dictionary = null;
+
+function isArray(value) {
+  return Object.prototype.toString.call(value) === '[object Array]';
+}
 
 function hex(data) {
   return new Buffer(data).toString('hex');
@@ -275,16 +282,6 @@ function miniLockId(publicKey) {
   return Base58.encode(id);
 }
 
-function writeOutput(contents, filename) {
-  if (contents != null) {
-    if (typeof filename === 'string') {
-      fs.writeFileSync(filename, contents);
-    } else {
-      process.stdout.write(contents);
-    }
-  }
-}
-
 function readPassphrase(passphrase, minEntropy, callback) {
   var defaultMinEntropy = 100;
 
@@ -428,6 +425,27 @@ function makeHeader(ids, senderInfo, fileInfo) {
   return JSON.stringify(header);
 }
 
+function encryptChunk(chunk, encryptor, output, hash) {
+  if (chunk && chunk.length > ENCRYPTION_CHUNK_SIZE) {
+    for (var i = 0; i < chunk.length; i += ENCRYPTION_CHUNK_SIZE) {
+      encryptChunk(chunk.slice(i, i + ENCRYPTION_CHUNK_SIZE),
+          encryptor, output, hash);
+    }
+  } else {
+    chunk = encryptor.encryptChunk(new Uint8Array(chunk || []), !chunk);
+
+    debug("Encrypted chunk " + hex(chunk));
+
+    if (isArray(output)) {
+      output.push(chunk);
+    } else if (output instanceof stream.Writable) {
+      output.write(new Buffer(chunk));
+    }
+
+    hash.update(chunk);
+  }
+}
+
 function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     anonymous, checkId, callback) {
   debug("Begin file encryption");
@@ -458,38 +476,23 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       secretKey: keyPair.secretKey
     };
 
-    if (typeof file !== 'string' && process.stdin.isTTY) {
-      console.error('Reading from stdin ...');
-    }
-
     var fileKey   = nacl.randomBytes(32);
     var fileNonce = nacl.randomBytes(16);
 
     debug("Using file key " + hex(fileKey));
     debug("Using file nonce " + hex(fileNonce));
 
-    var chunkSize = 256;
-
     var encryptor = nacl_.stream.createEncryptor(fileKey, fileNonce,
-        chunkSize);
-    var hashObject = new BLAKE2s(32);
+        ENCRYPTION_CHUNK_SIZE);
+    var hash = new BLAKE2s(32);
 
-    var encryptedChunks = [];
+    var encryptedDataFile = path.resolve(os.tmpdir(),
+        '.mlck-' + hex(fileKey) + '.tmp');
+    var encryptedDataFileStream = fs.createWriteStream(encryptedDataFile);
 
-    var addChunk = function (chunk) {
-      if (chunk && chunk.length > chunkSize) {
-        for (var i = 0; i < chunk.length; i += chunkSize) {
-          addChunk(chunk.slice(i, i + chunkSize));
-        }
-      } else {
-        chunk = encryptor.encryptChunk(new Uint8Array(chunk || []), !chunk);
-
-        debug("Encrypted chunk " + hex(chunk));
-
-        encryptedChunks.push(chunk);
-        hashObject.update(chunk);
-      }
-    };
+    if (typeof file !== 'string' && process.stdin.isTTY) {
+      console.error('Reading from stdin ...');
+    }
 
     var inputStream = typeof file === 'string' ? fs.createReadStream(file)
       : process.stdin;
@@ -501,16 +504,16 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     inputStream.on('readable', function () {
       var chunk = inputStream.read();
       if (chunk !== null) {
-        addChunk(chunk);
+        encryptChunk(chunk, encryptor, encryptedDataFileStream, hash);
       }
     });
 
     inputStream.on('end', function () {
-      addChunk(null);
+      encryptChunk(null, encryptor, encryptedDataFileStream, hash);
 
       encryptor.clean();
 
-      var fileHash = hashObject.digest();
+      var fileHash = hash.digest();
 
       debug("File hash is " + hex(fileHash));
 
@@ -528,16 +531,6 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 
       debug("Header length is " + hex(headerLength));
 
-      var output = [
-        'miniLock',
-        headerLength,
-        header
-      ].concat(encryptedChunks).reduce(
-          function (output, chunk) {
-        return Buffer.concat([ output, new Buffer(chunk, 'utf8') ]);
-      },
-      new Buffer(0));
-
       var filename = typeof outputFile === 'string' ? outputFile
         : typeof file === 'string' ? file + '.minilock'
         : null;
@@ -548,20 +541,54 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         debug("Writing to stdout");
       }
 
-      if (typeof filename === 'string' || !process.stdout.isTTY) {
-        try {
-          writeOutput(output, filename);
-        } catch (error) {
-          callback(error);
-          return;
-        }
-      } else {
+      if (typeof filename !== 'string' && process.stdout.isTTY) {
         console.error('WARNING: Not writing output to terminal.');
       }
 
-      debug("File encryption complete");
+      var outputStream = typeof filename === 'string'
+        ? fs.createWriteStream(filename) : !process.stdout.isTTY
+        ? process.stdout : null;
 
-      callback(null, fromId, output.length, filename);
+      var outputByteCount = 0;
+
+      var outputHeader = Buffer.concat([
+        new Buffer('miniLock'), headerLength, new Buffer(header)
+      ]);
+
+      if (outputStream) {
+        outputStream.write(outputHeader);
+      }
+
+      outputByteCount += outputHeader.length;
+
+      encryptedDataFileStream.end(function () {
+        encryptedDataFileStream = fs.createReadStream(encryptedDataFile);
+
+        encryptedDataFileStream.on('error', function (error) {
+          callback(error);
+        });
+
+        encryptedDataFileStream.on('readable', function () {
+          var chunk = encryptedDataFileStream.read();
+          if (chunk !== null) {
+            if (outputStream) {
+              outputStream.write(chunk);
+            }
+
+            outputByteCount += chunk.length;
+          }
+        });
+
+        encryptedDataFileStream.on('end', function () {
+          debug("File encryption complete");
+
+          async(function () {
+            fs.unlink(encryptedDataFile);
+
+            callback(null, fromId, outputByteCount, filename);
+          });
+        });
+      });
     });
   });
 }
