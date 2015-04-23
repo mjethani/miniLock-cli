@@ -11,7 +11,7 @@ var nacl_     = require('nacl-stream');
 var scrypt    = require('scrypt-async');
 var zxcvbn    = require('zxcvbn');
 
-var debug = require('debug')('mlck');
+var debug = function () {};
 
 var help = 'usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]\n'
          + '       mlck encrypt [<id> ...] [--self] [--email=<email>]\n'
@@ -793,6 +793,14 @@ function handleEncryptCommand() {
 }
 
 function run() {
+  if (process.argv[2] === '--debug') {
+    process.argv.splice(2, 1);
+
+    debug = function () {
+      console.error.apply(console, arguments);
+    }
+  }
+
   var command = process.argv[2];
 
   switch (command) {

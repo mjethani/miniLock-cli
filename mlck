@@ -1,12 +1,4 @@
 #!/usr/bin/env node
 
-if (process.argv[2] === '--debug') {
-  process.argv.splice(2, 1);
-
-  if (process.env.DEBUG === undefined) {
-    process.env.DEBUG = 'mlck';
-  }
-}
-
 require('./main').run();
 
