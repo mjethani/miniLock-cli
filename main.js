@@ -146,45 +146,6 @@ function parseArgs(args) {
   obj);
 }
 
-function slurp(encoding, callback) {
-  if (typeof encoding === 'function') {
-    callback = encoding;
-    encoding = null;
-  }
-
-  var input = '';
-
-  if (encoding) {
-    process.stdin.setEncoding(encoding);
-  } else {
-    input = new Buffer(0);
-  }
-
-  process.stdin.on('readable', function () {
-    var chunk = process.stdin.read();
-    if (chunk !== null) {
-      if (typeof input === 'string') {
-        input += chunk;
-      } else {
-        input = Buffer.concat([ input, chunk ]);
-      }
-    }
-  });
-
-  process.stdin.on('end', function () {
-    callback(null, input);
-  });
-}
-
-function slurpFile(filename, encoding, callback) {
-  if (typeof encoding === 'function') {
-    callback = encoding;
-    encoding = null;
-  }
-
-  fs.readFile(filename, { encoding: encoding }, callback);
-}
-
 function prompt(label, quiet, callback) {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     throw new Error('No TTY.');
@@ -312,14 +273,6 @@ function miniLockId(publicKey) {
   id[32] = hash.digest()[0];
 
   return Base58.encode(id);
-}
-
-function readInput(filename, callback) {
-  if (typeof filename === 'string') {
-    slurpFile(filename, callback);
-  } else {
-    slurp(callback);
-  }
 }
 
 function writeOutput(contents, filename) {
@@ -509,32 +462,53 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       console.error('Reading from stdin ...');
     }
 
-    readInput(file, function (error, contents) {
-      if (error) {
-        callback(error);
-        return;
+    var fileKey   = nacl.randomBytes(32);
+    var fileNonce = nacl.randomBytes(16);
+
+    debug("Using file key " + hex(fileKey));
+    debug("Using file nonce " + hex(fileNonce));
+
+    var chunkSize = 256;
+
+    var encryptor = nacl_.stream.createEncryptor(fileKey, fileNonce,
+        chunkSize);
+    var hashObject = new BLAKE2s(32);
+
+    var encryptedChunks = [];
+
+    var addChunk = function (chunk) {
+      if (chunk && chunk.length > chunkSize) {
+        for (var i = 0; i < chunk.length; i += chunkSize) {
+          addChunk(chunk.slice(i, i + chunkSize));
+        }
+      } else {
+        chunk = encryptor.encryptChunk(new Uint8Array(chunk || []), !chunk);
+
+        debug("Encrypted chunk " + hex(chunk));
+
+        encryptedChunks.push(chunk);
+        hashObject.update(chunk);
       }
+    };
 
-      var fileKey   = nacl.randomBytes(32);
-      var fileNonce = nacl.randomBytes(16);
+    var inputStream = typeof file === 'string' ? fs.createReadStream(file)
+      : process.stdin;
 
-      debug("Using file key " + hex(fileKey));
-      debug("Using file nonce " + hex(fileNonce));
+    inputStream.on('error', function (error) {
+      callback(error);
+    });
 
-      var chunkSize = Math.max(256, contents.length);
+    inputStream.on('readable', function () {
+      var chunk = inputStream.read();
+      if (chunk !== null) {
+        addChunk(chunk);
+      }
+    });
 
-      var encryptor = nacl_.stream.createEncryptor(fileKey, fileNonce,
-          chunkSize);
-      var hashObject = new BLAKE2s(32);
-
-      var encryptedChunk = encryptor.encryptChunk(new Uint8Array(contents),
-          true);
-
-      debug("Encrypted chunk " + hex(encryptedChunk));
+    inputStream.on('end', function () {
+      addChunk(null);
 
       encryptor.clean();
-
-      hashObject.update(encryptedChunk);
 
       var fileHash = hashObject.digest();
 
@@ -557,9 +531,9 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       var output = [
         'miniLock',
         headerLength,
-        header,
-        encryptedChunk
-      ].reduce(function (output, chunk) {
+        header
+      ].concat(encryptedChunks).reduce(
+          function (output, chunk) {
         return Buffer.concat([ output, new Buffer(chunk, 'utf8') ]);
       },
       new Buffer(0));
