@@ -1,0 +1,11 @@
+node_modules
+Makefile
+.npmignore
+.gitignore
+.*.tmp
+.*.swp
+*.txt
+*.sh
+*.minilock
+*.log
+
