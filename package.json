@@ -27,7 +27,7 @@
     "nacl-stream": "^0.3.3",
     "scrypt-async": "^1.0.1",
     "tweetnacl": "^0.13.1",
-    "zxcvbn": "git://github.com/dropbox/zxcvbn.git"
+    "zxcvbn": "git://github.com/dropbox/zxcvbn.git#063315ee6400116dacbd244f1dc98a54e0c53aec"
   },
   "license": "ISC"
 }
