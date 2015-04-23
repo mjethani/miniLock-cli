@@ -219,19 +219,27 @@ function loadProfile() {
 }
 
 function loadDictionary() {
-  var data = fs.readFileSync(path.resolve(__dirname, 'dictionary'),
-      { encoding: 'utf8' });
+  try {
+    var data = fs.readFileSync(path.resolve(__dirname, 'dictionary'),
+        { encoding: 'utf8' });
 
-  dictionary = data.split('\n').map(function (line) {
-    return line.replace(/^\s*|\s*$/g, '').replace(/^#.*/, '');
-  }).filter(function (line) {
-    return line !== '';
-  });
+    dictionary = data.split('\n').map(function (line) {
+      return line.replace(/^\s*|\s*$/g, '').replace(/^#.*/, '');
+    }).filter(function (line) {
+      return line !== '';
+    });
+  } catch (error) {
+    dictionary = [];
+  }
 }
 
 function randomPassphrase(entropy) {
   if (!dictionary) {
     loadDictionary();
+  }
+
+  if (dictionary.length === 0) {
+    return null;
   }
 
   var passphrase = '';
@@ -300,7 +308,11 @@ function readPassphrase(passphrase, minEntropy, callback) {
     });
   } else {
     if (minEntropy) {
-      console.log(randomPassphrase(minEntropy), os.EOL);
+      var example = randomPassphrase(minEntropy);
+      if (example) {
+        console.log(example);
+        console.log();
+      }
     }
 
     prompt('Passphrase (leave blank to quit): ', true,
