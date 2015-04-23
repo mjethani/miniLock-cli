@@ -380,6 +380,28 @@ function saveId(email, id) {
       JSON.stringify(profile));
 }
 
+function readableArray(array) {
+  var fakeReadable = {};
+
+  fakeReadable.on = function (event, listener) {
+    if (event === 'readable') {
+      async(function () {
+        array.slice().forEach(function () {
+          listener();
+        });
+      });
+    } else if (event === 'end') {
+      async(listener);
+    }
+  };
+
+  fakeReadable.read = function () {
+    return array.shift();
+  };
+
+  return fakeReadable;
+}
+
 function makeHeader(ids, senderInfo, fileInfo) {
   var ephemeral = nacl.box.keyPair();
   var header = {
@@ -437,7 +459,7 @@ function encryptChunk(chunk, encryptor, output, hash) {
     debug("Encrypted chunk " + hex(chunk));
 
     if (isArray(output)) {
-      output.push(chunk);
+      output.push(new Buffer(chunk));
     } else if (output instanceof stream.Writable) {
       output.write(new Buffer(chunk));
     }
@@ -488,7 +510,8 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 
     var encryptedDataFile = path.resolve(os.tmpdir(),
         '.mlck-' + hex(fileKey) + '.tmp');
-    var encryptedDataFileStream = fs.createWriteStream(encryptedDataFile);
+
+    var encrypted = [];
 
     if (typeof file !== 'string' && process.stdin.isTTY) {
       console.error('Reading from stdin ...');
@@ -497,8 +520,10 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     var inputStream = typeof file === 'string' ? fs.createReadStream(file)
       : process.stdin;
 
+    var inputByteCount = 0;
+
     inputStream.on('error', function (error) {
-      fs.unlink(encryptedDataFile);
+      fs.unlink(encryptedDataFile, function () {});
 
       callback(error);
     });
@@ -506,12 +531,24 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     inputStream.on('readable', function () {
       var chunk = inputStream.read();
       if (chunk !== null) {
-        encryptChunk(chunk, encryptor, encryptedDataFileStream, hash);
+        inputByteCount += chunk.length;
+
+        if (inputByteCount > 4 * 1024 && isArray(encrypted)) {
+          var stream = fs.createWriteStream(encryptedDataFile);
+
+          encrypted.forEach(function (chunk) {
+            stream.write(chunk);
+          });
+
+          encrypted = stream;
+        }
+
+        encryptChunk(chunk, encryptor, encrypted, hash);
       }
     });
 
     inputStream.on('end', function () {
-      encryptChunk(null, encryptor, encryptedDataFileStream, hash);
+      encryptChunk(null, encryptor, encrypted, hash);
 
       encryptor.clean();
 
@@ -563,19 +600,27 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 
       outputByteCount += outputHeader.length;
 
-      encryptedDataFileStream.end(function () {
-        encryptedDataFileStream = fs.createReadStream(encryptedDataFile);
+      if (isArray(encrypted)) {
+        encrypted.end = async;
+      }
 
-        encryptedDataFileStream.on('error', function (error) {
+      encrypted.end(function () {
+        if (isArray(encrypted)) {
+          encrypted = readableArray(encrypted);
+        } else {
+          encrypted = fs.createReadStream(encryptedDataFile);
+        }
+
+        encrypted.on('error', function (error) {
           async(function () {
-            fs.unlink(encryptedDataFile);
+            fs.unlink(encryptedDataFile, function () {});
 
             callback(error);
           });
         });
 
-        encryptedDataFileStream.on('readable', function () {
-          var chunk = encryptedDataFileStream.read();
+        encrypted.on('readable', function () {
+          var chunk = encrypted.read();
           if (chunk !== null) {
             if (outputStream) {
               outputStream.write(chunk);
@@ -585,11 +630,11 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
           }
         });
 
-        encryptedDataFileStream.on('end', function () {
+        encrypted.on('end', function () {
           debug("File encryption complete");
 
           async(function () {
-            fs.unlink(encryptedDataFile);
+            fs.unlink(encryptedDataFile, function () {});
 
             callback(null, fromId, outputByteCount, filename);
           });
