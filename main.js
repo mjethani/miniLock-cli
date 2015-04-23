@@ -498,6 +498,8 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       : process.stdin;
 
     inputStream.on('error', function (error) {
+      fs.unlink(encryptedDataFile);
+
       callback(error);
     });
 
@@ -565,7 +567,11 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         encryptedDataFileStream = fs.createReadStream(encryptedDataFile);
 
         encryptedDataFileStream.on('error', function (error) {
-          callback(error);
+          async(function () {
+            fs.unlink(encryptedDataFile);
+
+            callback(error);
+          });
         });
 
         encryptedDataFileStream.on('readable', function () {
