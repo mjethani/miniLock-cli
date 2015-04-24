@@ -42,6 +42,11 @@ var zxcvbn    = require('zxcvbn');
 
 var debug = function () {};
 
+var ERR_ID_CHECK_FAILED = 'ID check failed';
+var ERR_PARSE_ERROR = 'Parse error';
+var ERR_UNSUPPORTED_VERSION = 'Unsupported version';
+var ERR_NOT_A_RECIPIENT = 'Not a recipient';
+
 var help = 'usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]\n'
          + '       mlck encrypt [<id> ...] [--self] [--email=<email>]\n'
          + '                    [--file=<file>] [--output-file=<output-file>]\n'
@@ -605,7 +610,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     debug("Our miniLock ID is " + fromId);
 
     if (!anonymous && checkId && fromId !== checkId) {
-      callback('ID check failed', fromId);
+      callback(ERR_ID_CHECK_FAILED, keyPair);
       return;
     }
 
@@ -641,7 +646,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     inputStream.on('error', function (error) {
       fs.unlink(encryptedDataFile, function () {});
 
-      callback(error);
+      callback(error, keyPair);
     });
 
     inputStream.on('readable', function () {
@@ -731,7 +736,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
           async(function () {
             fs.unlink(encryptedDataFile, function () {});
 
-            callback(error);
+            callback(error, keyPair);
           });
         });
 
@@ -752,7 +757,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
           async(function () {
             fs.unlink(encryptedDataFile, function () {});
 
-            callback(null, fromId, outputByteCount, filename);
+            callback(null, keyPair, outputByteCount, filename);
           });
         });
       });
@@ -775,7 +780,7 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
     debug("Our miniLock ID is " + toId);
 
     if (checkId && toId !== checkId) {
-      callback('ID check failed', toId);
+      callback(ERR_ID_CHECK_FAILED, keyPair);
       return;
     }
 
@@ -813,12 +818,8 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
 
     var outputByteCount = 0;
 
-    if (outputStream === process.stdout && process.stdout.isTTY) {
-      console.log('--- BEGIN MESSAGE ---');
-    }
-
     inputStream.on('error', function (error) {
-      callback(error);
+      callback(error, keyPair);
     });
 
     inputStream.on('readable', function () {
@@ -841,12 +842,25 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
               if (buffer.length >= 12 + headerLength) {
                 header = JSON.parse(buffer.slice(12, 12 + headerLength)
                   .toString());
-                decryptInfo = extractDecryptInfo(header, keyPair.secretKey);
+
+                if (header.version !== 1) {
+                  throw ERR_UNSUPPORTED_VERSION;
+                }
+
+                if (!validateKey(header.ephemeral)) {
+                  throw ERR_PARSE_ERROR;
+                }
+
+                if (!(decryptInfo = extractDecryptInfo(header, keyPair.secretKey))) {
+                  throw ERR_NOT_A_RECIPIENT;
+                }
+
                 buffer = buffer.slice(12 + headerLength);
               }
             }
           } catch (error) {
-            callback(error_ = error);
+            callback(error_ = error.name === 'SyntaxError' ? ERR_PARSE_ERROR : error,
+                keyPair);
             return;
           }
         }
@@ -857,6 +871,10 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
                 nacl.util.decodeBase64(decryptInfo.fileInfo.fileKey),
                 nacl.util.decodeBase64(decryptInfo.fileInfo.fileNonce),
                 0x100000);
+
+            if (outputStream === process.stdout && process.stdout.isTTY) {
+              console.log('--- BEGIN MESSAGE ---');
+            }
           }
 
           var array = [];
@@ -883,7 +901,8 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
 
       debug("File decryption complete");
 
-      callback(null, decryptInfo.senderID, outputByteCount, outputFilename);
+      callback(null, keyPair, outputByteCount, outputFilename,
+          decryptInfo.senderID);
     });
   });
 }
@@ -1012,9 +1031,9 @@ function handleEncryptCommand() {
     }
 
     encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
-        anonymous, checkId, function (error, fromId, length, filename) {
+        anonymous, checkId, function (error, keyPair, length, filename) {
       if (error) {
-        if (checkId && fromId && fromId !== checkId) {
+        if (error === ERR_ID_CHECK_FAILED) {
           console.error('Incorrect passphrase for ' + email);
         } else {
           logError(error);
@@ -1024,7 +1043,7 @@ function handleEncryptCommand() {
 
       if (process.stdout.isTTY) {
         console.log();
-        console.log('Encrypted from ' + fromId + '.');
+        console.log('Encrypted from ' + miniLockId(keyPair.publicKey) + '.');
         console.log();
 
         if (typeof filename === 'string') {
@@ -1088,10 +1107,17 @@ function handleDecryptCommand() {
     debug("Using passphrase " + passphrase);
 
     decryptFile(email, passphrase, file, outputFile, checkId,
-        function (error, fromId, length, filename) {
+        function (error, keyPair, length, filename, senderId) {
       if (error) {
-        if (checkId && fromId && fromId !== checkId) {
+        if (error === ERR_ID_CHECK_FAILED) {
           console.error('Incorrect passphrase for ' + email);
+        } else if (error === ERR_PARSE_ERROR) {
+          console.error('The file appears corrupt.');
+        } else if (error === ERR_UNSUPPORTED_VERSION) {
+          console.error('This miniLock version is not supported.');
+        } else if (error === ERR_NOT_A_RECIPIENT) {
+          console.error('The message is not intended for '
+              + miniLockId(keyPair.publicKey) + '.');
         } else {
           logError(error);
         }
@@ -1100,7 +1126,7 @@ function handleDecryptCommand() {
 
       if (process.stdout.isTTY) {
         console.log();
-        console.log('Encrypted from ' + fromId + '.');
+        console.log('Encrypted from ' + senderId + '.');
         console.log();
 
         if (typeof filename === 'string') {
