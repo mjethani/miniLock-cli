@@ -654,7 +654,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         console.error('WARNING: Filename is too long and will be truncated.');
       }
 
-      filenameBuffer.write(file);
+      filenameBuffer.write(path.basename(file));
     }
 
     encryptChunk(filenameBuffer, encryptor, encrypted, hash);
@@ -1165,7 +1165,7 @@ function handleDecryptCommand() {
 
       if (process.stdout.isTTY) {
         console.log();
-        console.log('Encrypted from ' + senderId + '.');
+        console.log('Message from ' + senderId + '.');
         console.log();
 
         if (originalFilename) {
