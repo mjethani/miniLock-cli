@@ -58,7 +58,8 @@ var help = 'usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]\n
          + '       mlck decrypt [--email=<email>]\n'
          + '                    [--file=<file>] [--output-file=<output-file>]\n'
          + '                    [--passphrase=<passphrase>]\n'
-         + '       mlck --version\n';
+         + '       mlck --version\n'
+         + '       mlck --license\n';
 
 var ENCRYPTION_CHUNK_SIZE = 256;
 
@@ -1193,6 +1194,10 @@ function handleVersionCommand() {
       + ' v' + require('./package.json').version);
 }
 
+function handleLicenseCommand() {
+  process.stdout.write(fs.readFileSync(path.resolve(__dirname, 'LICENSE')));
+}
+
 function run() {
   if (process.argv[2] === '--debug') {
     process.argv.splice(2, 1);
@@ -1218,6 +1223,10 @@ function run() {
   case '--version':
   case '-V':
     handleVersionCommand();
+    break;
+  case 'license':
+  case '--license':
+    handleLicenseCommand();
     break;
   default:
     printUsage();
