@@ -57,7 +57,8 @@ var help = 'usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]\n
          + '                    [--anonymous]\n'
          + '       mlck decrypt [--email=<email>]\n'
          + '                    [--file=<file>] [--output-file=<output-file>]\n'
-         + '                    [--passphrase=<passphrase>]\n';
+         + '                    [--passphrase=<passphrase>]\n'
+         + '       mlck --version\n';
 
 var ENCRYPTION_CHUNK_SIZE = 256;
 
@@ -1187,6 +1188,11 @@ function handleDecryptCommand() {
   });
 }
 
+function handleVersionCommand() {
+  console.log(require('./package.json').name
+      + ' v' + require('./package.json').version);
+}
+
 function run() {
   if (process.argv[2] === '--debug') {
     process.argv.splice(2, 1);
@@ -1207,6 +1213,11 @@ function run() {
     break;
   case 'decrypt':
     handleDecryptCommand();
+    break;
+  case 'version':
+  case '--version':
+  case '-V':
+    handleVersionCommand();
     break;
   default:
     printUsage();
