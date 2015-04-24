@@ -1,5 +1,5 @@
 /*  ----------------------------------------------------------------------------
- *  miniLock-cli v0.2.0
+ *  miniLock-cli v0.2.1
  *  
  *  A command line version of miniLock
  *  
