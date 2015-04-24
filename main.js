@@ -52,7 +52,10 @@ var help = 'usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]\n
          + '       mlck encrypt [<id> ...] [--self] [--email=<email>]\n'
          + '                    [--file=<file>] [--output-file=<output-file>]\n'
          + '                    [--passphrase=<passphrase>]\n'
-         + '                    [--anonymous]\n';
+         + '                    [--anonymous]\n'
+         + '       mlck decrypt [--email=<email>]\n'
+         + '                    [--file=<file>] [--output-file=<output-file>]\n'
+         + '                    [--passphrase=<passphrase>]\n';
 
 var ENCRYPTION_CHUNK_SIZE = 256;
 
