@@ -367,6 +367,20 @@ function readPassphrase(passphrase, minEntropy, callback) {
   }
 }
 
+function publicKeyFromId(id) {
+  return new Uint8Array(Base58.decode(id).slice(0, 32));
+}
+
+function validateKey(key) {
+  if (!key || !(key.length >= 40 && key.length <= 50)
+      || !/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/
+      .test(key)) {
+    return false;
+  }
+
+  return nacl.util.decodeBase64(key).length === 32;
+}
+
 function validateId(id) {
   if (!/^[1-9ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{40,55}$/
       .test(id)) {
@@ -458,7 +472,7 @@ function makeHeader(ids, senderInfo, fileInfo) {
     debug("Adding recipient " + id);
 
     var nonce = nacl.randomBytes(24);
-    var publicKey = new Uint8Array(Base58.decode(id).slice(0, 32));
+    var publicKey = publicKeyFromId(id);
 
     debug("Using nonce " + hex(nonce));
 
@@ -501,11 +515,13 @@ function encryptChunk(chunk, encryptor, output, hash) {
 
     if (isArray(output)) {
       output.push(new Buffer(chunk));
-    } else if (output instanceof stream.Writable) {
+    } else {
       output.write(new Buffer(chunk));
     }
 
-    hash.update(chunk);
+    if (hash) {
+      hash.update(chunk);
+    }
   }
 }
 
@@ -550,7 +566,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     var hash = new BLAKE2s(32);
 
     var encryptedDataFile = path.resolve(os.tmpdir(),
-        '.mlck-' + hex(fileKey) + '.tmp');
+        '.mlck-' + hex(nacl.randomBytes(32)) + '.tmp');
 
     var encrypted = [];
 
