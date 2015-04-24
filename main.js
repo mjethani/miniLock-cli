@@ -836,6 +836,8 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
       debug("Writing to stdout");
     }
 
+    var originalFilename = null;
+
     var outputStream = typeof outputFilename === 'string'
       ? fs.createWriteStream(outputFilename) : process.stdout;
 
@@ -903,6 +905,10 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
 
           buffer = decryptChunk(buffer, decryptor, array, hash);
 
+          if (!originalFilename && array.length > 0) {
+            originalFilename = array.shift().toString();
+          }
+
           array.forEach(function (chunk) {
             outputStream.write(chunk);
 
@@ -927,7 +933,9 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
         debug("File decryption complete");
 
         callback(null, keyPair, outputByteCount, outputFilename,
-            decryptInfo.senderID);
+            decryptInfo.senderID,
+            originalFilename !== Array(256 + 1).join('\0')
+              ? originalFilename : null);
       }
     });
   });
@@ -1133,7 +1141,8 @@ function handleDecryptCommand() {
     debug("Using passphrase " + passphrase);
 
     decryptFile(email, passphrase, file, outputFile, checkId,
-        function (error, keyPair, length, filename, senderId) {
+        function (error, keyPair, length, filename, senderId,
+          originalFilename) {
       if (error) {
         if (error === ERR_ID_CHECK_FAILED) {
           console.error('Incorrect passphrase for ' + email);
@@ -1156,6 +1165,11 @@ function handleDecryptCommand() {
         console.log();
         console.log('Encrypted from ' + senderId + '.');
         console.log();
+
+        if (originalFilename) {
+          console.log('Original filename: ' + originalFilename);
+          console.log();
+        }
 
         if (typeof filename === 'string') {
           console.log('Wrote ' + length + ' bytes to ' + filename);
