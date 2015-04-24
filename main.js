@@ -502,6 +502,34 @@ function makeHeader(ids, senderInfo, fileInfo) {
   return JSON.stringify(header);
 }
 
+function extractDecryptInfo(header, secretKey) {
+  var decryptInfo = null;
+
+  var ephemeral = nacl.util.decodeBase64(header.ephemeral);
+
+  for (var i in header.decryptInfo) {
+    var nonce = nacl.util.decodeBase64(i);
+
+    decryptInfo = nacl.util.decodeBase64(header.decryptInfo[i]);
+    decryptInfo = nacl.box.open(decryptInfo, nonce, ephemeral, secretKey);
+
+    if (decryptInfo) {
+      decryptInfo = JSON.parse(nacl.util.encodeUTF8(decryptInfo));
+
+      decryptInfo.fileInfo = nacl.util.decodeBase64(decryptInfo.fileInfo);
+      decryptInfo.fileInfo = nacl.box.open(decryptInfo.fileInfo, nonce,
+          publicKeyFromId(decryptInfo.senderID), secretKey);
+
+      decryptInfo.fileInfo = JSON.parse(
+          nacl.util.encodeUTF8(decryptInfo.fileInfo)
+          );
+      break;
+    }
+  }
+
+  return decryptInfo;
+}
+
 function encryptChunk(chunk, encryptor, output, hash) {
   if (chunk && chunk.length > ENCRYPTION_CHUNK_SIZE) {
     for (var i = 0; i < chunk.length; i += ENCRYPTION_CHUNK_SIZE) {
@@ -523,6 +551,37 @@ function encryptChunk(chunk, encryptor, output, hash) {
       hash.update(chunk);
     }
   }
+}
+
+function decryptChunk(chunk, decryptor, output, hash) {
+  while (true) {
+    var length = chunk.length >= 4 ? chunk.readUIntLE(0, 4, true) : 0;
+
+    if (chunk.length < 4 + 16 + length) {
+      break;
+    }
+
+    var encrypted = new Uint8Array(chunk.slice(0, 4 + 16 + length));
+    var decrypted = decryptor.decryptChunk(encrypted, false);
+
+    chunk = chunk.slice(4 + 16 + length);
+
+    if (decrypted) {
+      debug("Decrypted chunk " + hex(decrypted));
+
+      if (isArray(output)) {
+        output.push(new Buffer(decrypted));
+      } else {
+        output.write(new Buffer(decrypted));
+      }
+    }
+
+    if (hash) {
+      hash.update(encrypted);
+    }
+  }
+
+  return chunk;
 }
 
 function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
@@ -701,6 +760,134 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
   });
 }
 
+function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
+  debug("Begin file decryption");
+
+  debug("Generating key pair with email " + email
+      + " and passphrase " + passphrase);
+
+  getKeyPair(passphrase, email, function (keyPair) {
+    debug("Our public key is " + hex(keyPair.publicKey));
+    debug("Our secret key is " + hex(keyPair.secretKey));
+
+    var toId = miniLockId(keyPair.publicKey);
+
+    debug("Our miniLock ID is " + toId);
+
+    if (checkId && toId !== checkId) {
+      callback('ID check failed', toId);
+      return;
+    }
+
+    var headerLength = 0;
+    var header = null;
+
+    var decryptInfo = null;
+
+    var decryptor = null;
+
+    var hash = new BLAKE2s(32);
+
+    if (typeof file !== 'string' && process.stdin.isTTY) {
+      console.error('Reading from stdin ...');
+    }
+
+    var inputStream = typeof file === 'string' ? fs.createReadStream(file)
+      : process.stdin;
+
+    var buffer = new Buffer(0);
+
+    var error_ = null;
+
+    var outputFilename = typeof outputFile === 'string' ? outputFile
+      : null;
+
+    if (typeof outputFilename === 'string') {
+      debug("Writing to file " + outputFilename);
+    } else if (!process.stdout.isTTY) {
+      debug("Writing to stdout");
+    }
+
+    var outputStream = typeof outputFilename === 'string'
+      ? fs.createWriteStream(outputFilename) : process.stdout;
+
+    var outputByteCount = 0;
+
+    if (outputStream === process.stdout && process.stdout.isTTY) {
+      console.log('--- BEGIN MESSAGE ---');
+    }
+
+    inputStream.on('error', function (error) {
+      callback(error);
+    });
+
+    inputStream.on('readable', function () {
+      var chunk = inputStream.read();
+
+      if (error_ !== null) {
+        return;
+      }
+
+      if (chunk !== null) {
+        buffer = Buffer.concat([ buffer, chunk ]);
+
+        if (!header) {
+          try {
+            if (buffer.length >= 12) {
+              headerLength = buffer.readUIntLE(8, 4, true);
+
+              debug("Header length is " + headerLength);
+
+              if (buffer.length >= 12 + headerLength) {
+                header = JSON.parse(buffer.slice(12, 12 + headerLength)
+                  .toString());
+                decryptInfo = extractDecryptInfo(header, keyPair.secretKey);
+                buffer = buffer.slice(12 + headerLength);
+              }
+            }
+          } catch (error) {
+            callback(error_ = error);
+            return;
+          }
+        }
+
+        if (decryptInfo) {
+          if (!decryptor) {
+            decryptor = nacl_.stream.createDecryptor(
+                nacl.util.decodeBase64(decryptInfo.fileInfo.fileKey),
+                nacl.util.decodeBase64(decryptInfo.fileInfo.fileNonce),
+                0x100000);
+          }
+
+          var array = [];
+
+          buffer = decryptChunk(buffer, decryptor, array, hash);
+
+          array.forEach(function (chunk) {
+            outputStream.write(chunk);
+
+            outputByteCount += chunk.length;
+          });
+        }
+      }
+    });
+
+    inputStream.on('end', function () {
+      if (error_ !== null) {
+        return;
+      }
+
+      if (outputStream === process.stdout && process.stdout.isTTY) {
+        console.log('--- END MESSAGE ---');
+      }
+
+      debug("File decryption complete");
+
+      callback(null, decryptInfo.senderID, outputByteCount, outputFilename);
+    });
+  });
+}
+
 function handleIdCommand() {
   var defaultOptions = {
     'passphrase':      null,
@@ -849,6 +1036,82 @@ function handleEncryptCommand() {
   });
 }
 
+function handleDecryptCommand() {
+  var defaultOptions = {
+    'email':           null,
+    'passphrase':      null,
+    'file':            null,
+    'output-file':     null,
+  };
+
+  var shortcuts = {
+    '-e': '--email=',
+    '-P': '--passphrase=',
+    '-f': '--file=',
+    '-o': '--output-file='
+  };
+
+  var options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
+
+  if (options['!?'].length > 0) {
+    die("Unknown option '" + options['!?'][0] + "'.");
+  }
+
+  var email = options.email;
+  var passphrase = options.passphrase;
+
+  var file = options.file;
+  var outputFile = options['output-file'];
+
+  loadProfile();
+
+  if (typeof email !== 'string' && profile) {
+    email = profile.email;
+  }
+
+  if (typeof email !== 'string') {
+    die('Email required.');
+  }
+
+  if (typeof passphrase !== 'string' && !process.stdin.isTTY) {
+    die('No passphrase given; no terminal available.');
+  }
+
+  var checkId = profile && email === profile.email && profile.id;
+
+  readPassphrase(passphrase, 0, function (error, passphrase) {
+    if (error) {
+      logError(error);
+      die();
+    }
+
+    debug("Using passphrase " + passphrase);
+
+    decryptFile(email, passphrase, file, outputFile, checkId,
+        function (error, fromId, length, filename) {
+      if (error) {
+        if (checkId && fromId && fromId !== checkId) {
+          console.error('Incorrect passphrase for ' + email);
+        } else {
+          logError(error);
+        }
+        die();
+      }
+
+      if (process.stdout.isTTY) {
+        console.log();
+        console.log('Encrypted from ' + fromId + '.');
+        console.log();
+
+        if (typeof filename === 'string') {
+          console.log('Wrote ' + length + ' bytes to ' + filename);
+          console.log();
+        }
+      }
+    });
+  });
+}
+
 function run() {
   if (process.argv[2] === '--debug') {
     process.argv.splice(2, 1);
@@ -866,6 +1129,9 @@ function run() {
     break;
   case 'encrypt':
     handleEncryptCommand();
+    break;
+  case 'decrypt':
+    handleDecryptCommand();
     break;
   default:
     printUsage();
