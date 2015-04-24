@@ -46,6 +46,7 @@ var ERR_ID_CHECK_FAILED = 'ID check failed';
 var ERR_PARSE_ERROR = 'Parse error';
 var ERR_UNSUPPORTED_VERSION = 'Unsupported version';
 var ERR_NOT_A_RECIPIENT = 'Not a recipient';
+var ERR_MESSAGE_INTEGRITY_CHECK_FAILED = 'Message integrity check failed';
 
 var help = 'usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]\n'
          + '       mlck encrypt [<id> ...] [--self] [--email=<email>]\n'
@@ -515,11 +516,16 @@ function extractDecryptInfo(header, secretKey) {
   for (var i in header.decryptInfo) {
     var nonce = nacl.util.decodeBase64(i);
 
+    debug("Trying nonce " + hex(nonce));
+
     decryptInfo = nacl.util.decodeBase64(header.decryptInfo[i]);
     decryptInfo = nacl.box.open(decryptInfo, nonce, ephemeral, secretKey);
 
     if (decryptInfo) {
       decryptInfo = JSON.parse(nacl.util.encodeUTF8(decryptInfo));
+
+      debug("Recipient ID is " + decryptInfo.recipientID);
+      debug("Sender ID is " + decryptInfo.senderID);
 
       decryptInfo.fileInfo = nacl.util.decodeBase64(decryptInfo.fileInfo);
       decryptInfo.fileInfo = nacl.box.open(decryptInfo.fileInfo, nonce,
@@ -528,6 +534,13 @@ function extractDecryptInfo(header, secretKey) {
       decryptInfo.fileInfo = JSON.parse(
           nacl.util.encodeUTF8(decryptInfo.fileInfo)
           );
+
+      debug("File key is " + hex(nacl.util.decodeBase64(
+              decryptInfo.fileInfo.fileKey)));
+      debug("File nonce is " + hex(nacl.util.decodeBase64(
+              decryptInfo.fileInfo.fileNonce)));
+      debug("File hash is " + hex(nacl.util.decodeBase64(
+              decryptInfo.fileInfo.fileHash)));
       break;
     }
   }
@@ -837,8 +850,6 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
             if (buffer.length >= 12) {
               headerLength = buffer.readUIntLE(8, 4, true);
 
-              debug("Header length is " + headerLength);
-
               if (buffer.length >= 12 + headerLength) {
                 header = JSON.parse(buffer.slice(12, 12 + headerLength)
                   .toString());
@@ -851,7 +862,8 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
                   throw ERR_PARSE_ERROR;
                 }
 
-                if (!(decryptInfo = extractDecryptInfo(header, keyPair.secretKey))) {
+                if (!(decryptInfo = extractDecryptInfo(header, keyPair.secretKey))
+                    || decryptInfo.recipientID !== toId) {
                   throw ERR_NOT_A_RECIPIENT;
                 }
 
@@ -899,10 +911,14 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
         console.log('--- END MESSAGE ---');
       }
 
-      debug("File decryption complete");
+      if (nacl.util.encodeBase64(hash.digest()) !== decryptInfo.fileInfo.fileHash) {
+        callback(ERR_MESSAGE_INTEGRITY_CHECK_FAILED, keyPair);
+      } else {
+        debug("File decryption complete");
 
-      callback(null, keyPair, outputByteCount, outputFilename,
-          decryptInfo.senderID);
+        callback(null, keyPair, outputByteCount, outputFilename,
+            decryptInfo.senderID);
+      }
     });
   });
 }
@@ -1118,6 +1134,8 @@ function handleDecryptCommand() {
         } else if (error === ERR_NOT_A_RECIPIENT) {
           console.error('The message is not intended for '
               + miniLockId(keyPair.publicKey) + '.');
+        } else if (error === ERR_MESSAGE_INTEGRITY_CHECK_FAILED) {
+          console.error('The message is corrupt.');
         } else {
           logError(error);
         }
