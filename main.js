@@ -647,6 +647,16 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 
     var encrypted = [];
 
+    if (typeof file === 'string') {
+      if (file.length > 256) {
+        console.error('WARNING: Filename is too long and will be truncated.');
+      }
+
+      var filenameBuffer = new Buffer(256).fill(0);
+      filenameBuffer.write(file);
+      encryptChunk(filenameBuffer, encryptor, encrypted, hash);
+    }
+
     if (typeof file !== 'string' && process.stdin.isTTY) {
       console.error('Reading from stdin ...');
     }
