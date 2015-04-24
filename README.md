@@ -10,6 +10,8 @@ usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]
        mlck decrypt [--email=<email>]
                     [--file=<file>] [--output-file=<output-file>]
                     [--passphrase=<passphrase>]
+       mlck --version
+       mlck --license
 
 $ mlck id alice@example.com --passphrase='The quick brown fox jumped over the lazy dog' --save
 
