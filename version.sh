@@ -15,7 +15,7 @@ sed -E "s/(\"version\": )\"([^\"]+)\"/\1\"$version\"/" .package.json.tmp \
   > package.json
 
 cp -f main.js .main.js.tmp
-sed -E "s/^( \*  mlck v).+$/\1$version/" .main.js.tmp \
+sed -E "s/^( \*  miniLock-cli v).+$/\1$version/" .main.js.tmp \
   | sed -E "s/^(var _version = )'[^']+';$/\1'$version';/" \
   | sed -E "s/^( \*  Date: +).+$/\1$date/" \
   > main.js

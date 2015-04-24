@@ -1,7 +1,7 @@
 {
-  "name": "mlck",
+  "name": "miniLock-cli",
   "version": "0.2.0",
-  "description": "miniLock CLI",
+  "description": "A command line version of miniLock",
   "author": {
     "name": "Manish Jethani",
     "email": "manish.jethani@gmail.com",
@@ -18,7 +18,7 @@
   "preferGlobal": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/mjethani/mlck.git"
+    "url": "https://github.com/mjethani/miniLock-cli.git"
   },
   "dependencies": {
     "blake2s-js": "git@github.com:dchest/blake2s-js.git#64e449f020c47b88f3edb417efe0fbe65ebdf86e",
