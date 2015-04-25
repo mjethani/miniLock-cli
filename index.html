@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>miniLock-cli by mjethani</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>miniLock-cli</h1>
+        <p>A command line version of miniLock</p>
+        <p class="view"><a href="https://github.com/mjethani/miniLock-cli">View the Project on GitHub <small>mjethani/miniLock-cli</small></a></p>
+        <ul>
+          <li><a href="https://github.com/mjethani/miniLock-cli/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/mjethani/miniLock-cli/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/mjethani/miniLock-cli">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <p>miniLock-cli is a Node.js command line version of the miniLock encryption software.</p>
+
+<p>You can read about miniLock here:</p>
+
+<p><a href="https://minilock.io/">https://minilock.io/</a></p>
+
+<p>The CLI version is written from scratch using the same crypto libraries as the original Google Chrome app.</p>
+
+<hr>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>Install <a href="https://nodejs.org/">Node.js</a>.</p>
+
+<p>Then run the following command:</p>
+
+<div class="highlight highlight-console"><pre>$ <span class="pl-s1">npm install -g minilock-cli@0.2.3</span>
+<span class="pl-mo">/usr/local/bin/mlck -&gt; /usr/local/lib/node_modules/minilock-cli/mlck</span>
+<span class="pl-mo">minilock-cli@0.2.3 /usr/local/lib/node_modules/minilock-cli</span>
+<span class="pl-mo">├── bs58@2.0.1</span>
+<span class="pl-mo">├── nacl-stream@0.3.3</span>
+<span class="pl-mo">├── scrypt-async@1.0.1</span>
+<span class="pl-mo">├── blake2s-js@1.0.3</span>
+<span class="pl-mo">├── tweetnacl@0.13.1</span>
+<span class="pl-mo">└── zxcvbn@1.0.0</span>
+$ </pre></div>
+
+<p>Verify the installation:</p>
+
+<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck --version</span>
+<span class="pl-mo">miniLock-cli v0.2.3</span>
+$ </pre></div>
+
+<hr>
+
+<h2>
+<a id="tutorial" class="anchor" href="#tutorial" aria-hidden="true"><span class="octicon octicon-link"></span></a>Tutorial</h2>
+
+<p>Let's get started!</p>
+
+<h3>
+<a id="generate-an-id" class="anchor" href="#generate-an-id" aria-hidden="true"><span class="octicon octicon-link"></span></a>Generate an ID</h3>
+
+<p>First, you need a miniLock ID.</p>
+
+<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck id alice@example.com --save</span>
+<span class="pl-mo">period dry million besides usually wild everybody</span>
+
+<span class="pl-mo">Passphrase (leave blank to quit): </span></pre></div>
+
+<p>Enter a good passphrase, such as the one shown before the prompt. You need <a href="https://xkcd.com/936/">~100 bits of entropy</a>. Any 7-8 <em>randomly selected</em> words out of the English lexicon should be fine.</p>
+
+<p>If you insist on using a simple passphrase like "hello" (not recommended at all!), you must use the <code>--passphrase</code> option.</p>
+
+<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck id alice@example.com --save --passphrase=<span class="pl-s"><span class="pl-pds">'</span>hello<span class="pl-pds">'</span></span></span>
+
+<span class="pl-mo">Your miniLock ID: LRFbCrhCeN2uVCdDXd2bagoCM1fVcGvUzwhfVdqfyVuhi.</span>
+
+$ </pre></div>
+
+<p>You can look up your miniLock ID any time.</p>
+
+<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck id</span>
+
+<span class="pl-mo">Your miniLock ID: LRFbCrhCeN2uVCdDXd2bagoCM1fVcGvUzwhfVdqfyVuhi.</span>
+
+$ </pre></div>
+
+<p>Once you're sure about it (i.e. you've picked a good passphrase that is also easy to remember), you can publish it <a href="https://twitter.com/100101010000/status/589422009534164992">on Twitter</a>, <a href="https://blog.manishjethani.com/minilock.txt.asc">on your website</a>, and on various other channels. If people know your miniLock ID they can encrypt information to you even anonymously.</p>
+
+<h3>
+<a id="encrypt-a-file" class="anchor" href="#encrypt-a-file" aria-hidden="true"><span class="octicon octicon-link"></span></a>Encrypt a file</h3>
+
+<p>Let's say you have a text file called <code>message.txt</code> containing the following message:</p>
+
+<pre><code>The PIN code is 1337.
+
+Withdraw 10,100 euros and meet me at Frederick Street at 5pm.
+
+Don't forget my chocolate!
+</code></pre>
+
+<p>Now you can encrypt it to the miniLock ID gT1csvpmQDNRQSMkqc1Sz7ZWYzGZkmedPKEpgqjdNTy7Y using the following command:</p>
+
+<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck encrypt -f message.txt gT1csvpmQDNRQSMkqc1Sz7ZWYzGZkmedPKEpgqjdNTy7Y</span>
+<span class="pl-mo">Passphrase (leave blank to quit): </span></pre></div>
+
+<p>Once again, it asks you for your passphrase. This time it's to identify you as the sender. If you wish to send anonymously (using a randomly generated sender ID), use the <code>--anonymous</code> option.</p>
+
+<p>Note that you <em>can</em> send anonymously even if the message itself contains identifying information.</p>
+
+<p>Here's the full interaction:</p>
+
+<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck encrypt -f message.txt gT1csvpmQDNRQSMkqc1Sz7ZWYzGZkmedPKEpgqjdNTy7Y</span>
+<span class="pl-mo">Passphrase (leave blank to quit): </span>
+
+<span class="pl-mo">Encrypted from LRFbCrhCeN2uVCdDXd2bagoCM1fVcGvUzwhfVdqfyVuhi.</span>
+
+<span class="pl-mo">Wrote 1075 bytes to message.txt.minilock</span>
+
+$ </pre></div>
+
+<p>Now you can send the file <code>message.txt.minilock</code> to its intended recipient.</p>
+
+<h3>
+<a id="decrypt-a-file" class="anchor" href="#decrypt-a-file" aria-hidden="true"><span class="octicon octicon-link"></span></a>Decrypt a file</h3>
+
+<p>Your friend Bob receives a file called <code>message.txt.minilock</code> in the mail. Luckily he has miniLock-cli installed. He proceeds to decrypt the file using his email address and his passphrase.</p>
+
+<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck decrypt -f message.txt.minilock -e bob@example.com --passphrase=<span class="pl-s"><span class="pl-pds">'</span>puff magic dragon sea frolic autumn mist lee<span class="pl-pds">'</span></span></span>
+<span class="pl-mo">--- BEGIN MESSAGE ---</span>
+<span class="pl-mo">The PIN code is 1337.</span>
+
+<span class="pl-mo">Withdraw 10,100 euros and meet me at Frederick Street at 5pm.</span>
+
+<span class="pl-mo">Don't forget my chocolate!</span>
+<span class="pl-mo">--- END MESSAGE ---</span>
+
+<span class="pl-mo">Message from LRFbCrhCeN2uVCdDXd2bagoCM1fVcGvUzwhfVdqfyVuhi.</span>
+
+<span class="pl-mo">Original filename: message.txt</span>
+
+$ </pre></div>
+
+<p>Bob knows exactly what you mean by "Don't forget my chocolate!"</p>
+
+<hr>
+
+<h2>
+<a id="links" class="anchor" href="#links" aria-hidden="true"><span class="octicon octicon-link"></span></a>Links</h2>
+
+<p>Here are some useful links:</p>
+
+<ul>
+<li> <a href="https://github.com/kaepora/miniLock/blob/master/README.md">miniLock README.md</a>
+</li>
+<li> <a href="https://vimeo.com/101237413">Usable Crypto: Introducing miniLock (HOPE X)</a>
+</li>
+<li> <a href="http://www.wired.com/2014/07/minilock-simple-encryption/">The Ultra-Simple App That Lets Anyone Encrypt Anything</a>
+</li>
+<li> <a href="http://blog.cryptographyengineering.com/2014/08/whats-matter-with-pgp.html">A Few Thoughts on Cryptographic Engineering: What's the matter with PGP?</a>
+</li>
+</ul>
+      </section>
+    </div>
+    <footer>
+      <p>Project maintained by <a href="https://github.com/mjethani">mjethani</a></p>
+      <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
+    </footer>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-60519520-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
