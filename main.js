@@ -50,17 +50,6 @@ var ERR_UNSUPPORTED_VERSION = 'Unsupported version';
 var ERR_NOT_A_RECIPIENT = 'Not a recipient';
 var ERR_MESSAGE_INTEGRITY_CHECK_FAILED = 'Message integrity check failed';
 
-var help = 'usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]\n'
-         + '       mlck encrypt [<id> ...] [--self] [--email=<email>]\n'
-         + '                    [--file=<file>] [--output-file=<output-file>]\n'
-         + '                    [--passphrase=<passphrase>]\n'
-         + '                    [--anonymous]\n'
-         + '       mlck decrypt [--email=<email>]\n'
-         + '                    [--file=<file>] [--output-file=<output-file>]\n'
-         + '                    [--passphrase=<passphrase>]\n'
-         + '       mlck --version\n'
-         + '       mlck --license\n';
-
 var ENCRYPTION_CHUNK_SIZE = 256;
 
 var profile = null;
@@ -297,7 +286,25 @@ function randomPassphrase(entropy) {
 }
 
 function printUsage() {
-  console.error(help);
+  try {
+    var help = fs.readFileSync(path.resolve(__dirname, 'help', 'default.help'),
+        'utf8');
+
+    process.stderr.write(help.split('\n\n')[0] + '\n\n');
+  } catch (error) {
+  }
+}
+
+function printHelp(topic) {
+  try {
+    var help = fs.readFileSync(
+        path.resolve(__dirname, 'help', (topic || 'default') + '.help'),
+        'utf8');
+
+    process.stdout.write(help);
+  } catch (error) {
+    printUsage();
+  }
 }
 
 function getScryptKey(key, salt, callback) {
@@ -1189,6 +1196,10 @@ function handleDecryptCommand() {
   });
 }
 
+function handleHelpCommand() {
+  printHelp(process.argv[2] === 'help' && process.argv[3]);
+}
+
 function handleVersionCommand() {
   console.log(require('./package.json').name
       + ' v' + require('./package.json').version);
@@ -1218,6 +1229,12 @@ function run() {
     break;
   case 'decrypt':
     handleDecryptCommand();
+    break;
+  case 'help':
+  case '--help':
+  case '-h':
+  case '-?':
+    handleHelpCommand();
     break;
   case 'version':
   case '--version':

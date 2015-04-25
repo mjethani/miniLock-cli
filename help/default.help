@@ -1,0 +1,19 @@
+usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]
+       mlck encrypt [<id> ...] [--self] [--email=<email>]
+                    [--file=<file>] [--output-file=<output-file>]
+                    [--passphrase=<passphrase>]
+                    [--anonymous]
+       mlck decrypt [--email=<email>]
+                    [--file=<file>] [--output-file=<output-file>]
+                    [--passphrase=<passphrase>]
+       mlck help    [<topic>]
+       mlck --version
+       mlck --license
+
+The following commands are available:
+
+  id            Generate a miniLock ID
+  encrypt       Encrypt a file
+  decrypt       Decrypt a file
+  help          Print help on a topic
+

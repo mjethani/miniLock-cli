@@ -1,0 +1,8 @@
+usage: mlck id [<email>] [--passphrase=<passphrase>] [--save]
+
+Generate a miniLock ID
+
+e.g.
+
+  mlck id alice@example.com
+

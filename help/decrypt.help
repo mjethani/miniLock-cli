@@ -1,0 +1,10 @@
+usage: mlck decrypt [--email=<email>]
+                    [--file=<file>] [--output-file=<output-file>]
+                    [--passphrase=<passphrase>]
+
+Decrypt a file
+
+e.g.
+
+  mlck decrypt --file=message.txt.minilock
+

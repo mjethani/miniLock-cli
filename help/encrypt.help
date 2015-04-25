@@ -1,0 +1,11 @@
+usage: mlck encrypt [<id> ...] [--self] [--email=<email>]
+                    [--file=<file>] [--output-file=<output-file>]
+                    [--passphrase=<passphrase>]
+                    [--anonymous]
+
+Encrypt a file
+
+e.g.
+
+  mlck encrypt --file=message.txt psciyAZ9aqFPqS5c27k4VYkNSnbt5ACfMpUB5tnQme9Px
+
