@@ -1,6 +1,6 @@
 ```console
 $ npm install -g minilock-cli
-minilock-cli@0.2.1 /usr/local/lib/node_modules/minilock-cli
+minilock-cli@0.2.3 /usr/local/lib/node_modules/minilock-cli
 $ mlck
 usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]
        mlck encrypt [<id> ...] [--self] [--email=<email>]
@@ -10,6 +10,7 @@ usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]
        mlck decrypt [--email=<email>]
                     [--file=<file>] [--output-file=<output-file>]
                     [--passphrase=<passphrase>]
+       mlck help    [<topic>]
        mlck --version
        mlck --license
 
