@@ -1,5 +1,5 @@
 /*  ----------------------------------------------------------------------------
- *  miniLock-cli v0.2.2
+ *  miniLock-cli v0.2.3
  *  
  *  A command line version of miniLock
  *  
@@ -1201,8 +1201,7 @@ function handleHelpCommand() {
 }
 
 function handleVersionCommand() {
-  console.log(require('./package.json').name
-      + ' v' + require('./package.json').version);
+  console.log('miniLock-cli v' + require('./package.json').version);
 }
 
 function handleLicenseCommand() {
