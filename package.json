@@ -28,5 +28,9 @@
     "tweetnacl": "git@github.com:dchest/tweetnacl-js.git#abfbce7c68c8ad0b3b8a90b769e1f67885237aac",
     "zxcvbn": "git@github.com:dropbox/zxcvbn.git#063315ee6400116dacbd244f1dc98a54e0c53aec"
   },
+  "bugs": {
+    "url": "https://github.com/mjethani/miniLock-cli/issues",
+    "email": "manish.jethani+minilock@gmail.com"
+  },
   "license": "ISC"
 }
