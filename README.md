@@ -8,8 +8,6 @@ https://minilock.io/
 
 The CLI version is written from scratch using the same crypto libraries as the original Google Chrome app.
 
----
-
 ## Installation
 
 Install [Node.js](https://nodejs.org/).
@@ -36,8 +34,6 @@ $ mlck --version
 miniLock-cli v0.2.5
 $ 
 ```
-
----
 
 ## Tutorial
 
@@ -138,8 +134,6 @@ $
 ```
 
 Bob knows exactly what you mean by "Don't forget my chocolate!"
-
----
 
 ## Links
 
