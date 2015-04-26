@@ -255,8 +255,10 @@ function loadDictionary() {
         { encoding: 'utf8' });
 
     dictionary = data.split('\n').map(function (line) {
+      // Trim spaces and strip out comments.
       return line.replace(/^\s*|\s*$/g, '').replace(/^#.*/, '');
     }).filter(function (line) {
+      // Skip blank lines.
       return line !== '';
     });
   } catch (error) {
@@ -276,6 +278,7 @@ function randomPassphrase(entropy) {
   var passphrase = '';
 
   while (zxcvbn(passphrase).entropy < entropy) {
+    // Pick a random word from the dictionary and add it to the passphrase.
     var randomNumber = new Buffer(nacl.randomBytes(2)).readUInt16BE();
     var index = Math.floor((randomNumber / 0x10000) * dictionary.length);
 
@@ -287,9 +290,8 @@ function randomPassphrase(entropy) {
 
 function printUsage() {
   try {
-    var help = fs.readFileSync(path.resolve(__dirname, 'help', 'default.help'),
-        'utf8');
-
+    var help = fs.readFileSync(path.resolve(__dirname, 'help',
+          'default.help'), 'utf8');
     process.stderr.write(help.split('\n\n')[0] + '\n\n');
   } catch (error) {
   }
@@ -297,10 +299,8 @@ function printUsage() {
 
 function printHelp(topic) {
   try {
-    var help = fs.readFileSync(
-        path.resolve(__dirname, 'help', (topic || 'default') + '.help'),
-        'utf8');
-
+    var help = fs.readFileSync(path.resolve(__dirname, 'help',
+          (topic || 'default') + '.help'), 'utf8');
     process.stdout.write(help);
   } catch (error) {
     printUsage();
@@ -334,6 +334,7 @@ function miniLockId(publicKey) {
   var hash = new BLAKE2s(1);
   hash.update(publicKey);
 
+  // The last byte is the checksum.
   id[32] = hash.digest()[0];
 
   return Base58.encode(id);
@@ -357,6 +358,7 @@ function readPassphrase(passphrase, minEntropy, callback) {
     });
   } else {
     if (minEntropy) {
+      // Display a dictionary-based random passphrase as a hint/suggestion.
       var example = randomPassphrase(minEntropy);
       if (example) {
         console.log(example);
@@ -621,6 +623,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
   debug("Begin file encryption");
 
   if (anonymous) {
+    // Generate a random passphrase.
     email = 'Anonymous';
     passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
   }
@@ -656,9 +659,12 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         ENCRYPTION_CHUNK_SIZE);
     var hash = new BLAKE2s(32);
 
+    // Generate a random filename for writing encrypted chunks to instead of
+    // keeping everything in memory.
     var encryptedDataFile = path.resolve(os.tmpdir(),
         '.mlck-' + hex(nacl.randomBytes(32)) + '.tmp');
 
+    // This is where the encrypted chunks go.
     var encrypted = [];
 
     var filenameBuffer = new Buffer(256).fill(0);
@@ -671,6 +677,9 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       filenameBuffer.write(path.basename(file));
     }
 
+    // The first chunk is the 256-byte null-padded filename. If input is stdin,
+    // filename is blank. If the UTF-8-encoded filename is greater than 256
+    // bytes, it is truncated.
     encryptChunk(filenameBuffer, encryptor, encrypted, hash);
 
     if (typeof file !== 'string' && process.stdin.isTTY) {
@@ -693,6 +702,9 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       if (chunk !== null) {
         inputByteCount += chunk.length;
 
+        // If input exceeds the 4K threshold (picked arbitrarily), switch from
+        // writing to an array to writing to a file. This way we can do
+        // extremely large files.
         if (inputByteCount > 4 * 1024 && isArray(encrypted)) {
           var stream = fs.createWriteStream(encryptedDataFile);
 
@@ -703,15 +715,18 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
           encrypted = stream;
         }
 
+        // Encrypt this chunk.
         encryptChunk(chunk, encryptor, encrypted, hash);
       }
     });
 
     inputStream.on('end', function () {
+      // Finish up with the encryption.
       encryptChunk(null, encryptor, encrypted, hash);
 
       encryptor.clean();
 
+      // This is the 32-byte BLAKE2 hash of all the ciphertext.
       var fileHash = hash.digest();
 
       debug("File hash is " + hex(fileHash));
@@ -722,6 +737,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         fileHash: nacl.util.encodeBase64(fileHash)
       };
 
+      // Pack the sender and file information into a header.
       var header = makeHeader(includeSelf ? ids.concat(fromId) : ids,
           senderInfo, fileInfo);
 
@@ -751,6 +767,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
       var outputByteCount = 0;
 
       var outputHeader = Buffer.concat([
+        // The file always begins with the magic bytes 0x6d696e694c6f636b.
         new Buffer('miniLock'), headerLength, new Buffer(header)
       ]);
 
@@ -766,6 +783,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 
       encrypted.end(function () {
         if (isArray(encrypted)) {
+          // Wrap array into a stream-like interface.
           encrypted = readableArray(encrypted);
         } else {
           encrypted = fs.createReadStream(encryptedDataFile);
@@ -794,6 +812,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
           debug("File encryption complete");
 
           async(function () {
+            // Attempt to delete the temporary file, but ignore any error.
             fs.unlink(encryptedDataFile, function () {});
 
             callback(null, keyPair, outputByteCount, filename);
@@ -871,14 +890,18 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
       }
 
       if (chunk !== null) {
+        // Read chunk into buffer.
         buffer = Buffer.concat([ buffer, chunk ]);
 
         if (!header) {
           try {
             if (buffer.length >= 12) {
+              // Read the 4-byte header length, which is after the initial 8
+              // magic bytes of 'miniLock'.
               headerLength = buffer.readUIntLE(8, 4, true);
 
               if (buffer.length >= 12 + headerLength) {
+                // Read the header and parse the JSON object.
                 header = JSON.parse(buffer.slice(12, 12 + headerLength)
                   .toString());
 
@@ -895,6 +918,7 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
                   throw ERR_NOT_A_RECIPIENT;
                 }
 
+                // Shift the buffer pointer.
                 buffer = buffer.slice(12 + headerLength);
               }
             }
@@ -907,6 +931,7 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
 
         if (decryptInfo) {
           if (!decryptor) {
+            // Time to deal with the ciphertext.
             decryptor = nacl_.stream.createDecryptor(
                 nacl.util.decodeBase64(decryptInfo.fileInfo.fileKey),
                 nacl.util.decodeBase64(decryptInfo.fileInfo.fileNonce),
@@ -919,12 +944,15 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
 
           var array = [];
 
+          // Decrypt as many chunks as possible.
           buffer = decryptChunk(buffer, decryptor, array, hash);
 
           if (!originalFilename && array.length > 0) {
+            // The very first chunk is the original filename.
             originalFilename = array.shift().toString();
           }
 
+          // Write each decrypted chunk to the output stream.
           array.forEach(function (chunk) {
             outputStream.write(chunk);
 
@@ -944,6 +972,8 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
       }
 
       if (nacl.util.encodeBase64(hash.digest()) !== decryptInfo.fileInfo.fileHash) {
+        // The 32-byte BLAKE2 hash of the ciphertext must match the value in
+        // the header.
         callback(ERR_MESSAGE_INTEGRITY_CHECK_FAILED, keyPair);
       } else {
         debug("File decryption complete");
