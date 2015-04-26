@@ -670,7 +670,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
     var filenameBuffer = new Buffer(256).fill(0);
 
     if (typeof file === 'string') {
-      if (file.length > 256) {
+      if (new Buffer(path.basename(file)).length > 256) {
         console.error('WARNING: Filename is too long and will be truncated.');
       }
 
