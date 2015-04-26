@@ -1,3 +1,5 @@
+[![GitHub version](https://badge.fury.io/gh/mjethani%2FminiLock-cli.svg)](http://badge.fury.io/gh/mjethani%2FminiLock-cli)
+
 miniLock-cli is a Node.js command line version of the miniLock encryption software.
 
 You can read about miniLock here:
