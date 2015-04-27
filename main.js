@@ -922,26 +922,33 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
               buffer = new Buffer(buffer.slice(12));
             }
 
-            if (!isNaN(headerLength) && buffer.length >= headerLength) {
-              // Read the header and parse the JSON object.
-              header = JSON.parse(buffer.slice(0, headerLength).toString());
-
-              if (header.version !== 1) {
-                throw ERR_UNSUPPORTED_VERSION;
-              }
-
-              if (!validateKey(header.ephemeral)) {
+            if (!isNaN(headerLength)) {
+              // Look for the JSON opening brace.
+              if (buffer.length > 0 && buffer[0] !== 0x7b) {
                 throw ERR_PARSE_ERROR;
               }
 
-              if (!(decryptInfo = extractDecryptInfo(header,
-                        keyPair.secretKey))
-                  || decryptInfo.recipientID !== toId) {
-                throw ERR_NOT_A_RECIPIENT;
-              }
+              if (buffer.length >= headerLength) {
+                // Read the header and parse the JSON object.
+                header = JSON.parse(buffer.slice(0, headerLength).toString());
 
-              // Shift the buffer pointer.
-              buffer = buffer.slice(headerLength);
+                if (header.version !== 1) {
+                  throw ERR_UNSUPPORTED_VERSION;
+                }
+
+                if (!validateKey(header.ephemeral)) {
+                  throw ERR_PARSE_ERROR;
+                }
+
+                if (!(decryptInfo = extractDecryptInfo(header,
+                          keyPair.secretKey))
+                    || decryptInfo.recipientID !== toId) {
+                  throw ERR_NOT_A_RECIPIENT;
+                }
+
+                // Shift the buffer pointer.
+                buffer = buffer.slice(headerLength);
+              }
             }
           } catch (error) {
             callback(error_ = error.name === 'SyntaxError'
