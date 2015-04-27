@@ -899,6 +899,18 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
         if (!header) {
           try {
             if (isNaN(headerLength) && buffer.length >= 12) {
+              if (buffer[0] !== 0x6d
+                  || buffer[1] !== 0x69
+                  || buffer[2] !== 0x6e
+                  || buffer[3] !== 0x69
+                  || buffer[4] !== 0x4c
+                  || buffer[5] !== 0x6f
+                  || buffer[6] !== 0x63
+                  || buffer[7] !== 0x6b
+                 ) {
+                throw ERR_PARSE_ERROR;
+              }
+
               // Read the 4-byte header length, which is after the initial 8
               // magic bytes of 'miniLock'.
               headerLength = buffer.readUIntLE(8, 4, true);
