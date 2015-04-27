@@ -838,7 +838,7 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
       return;
     }
 
-    var headerLength = 0;
+    var headerLength = NaN;
     var header = null;
 
     var decryptInfo = null;
@@ -886,41 +886,54 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
       }
 
       if (chunk !== null) {
-        // Read chunk into buffer.
-        buffer = Buffer.concat([ buffer, chunk ]);
+        try {
+          // Read chunk into buffer.
+          buffer = Buffer.concat([ buffer, chunk ]);
+        } catch (error) {
+          // If the buffer length exceeds 0x3fffffff, it'll throw a RangeError.
+          callback(error_ = error.name === 'RangeError'
+              ? ERR_PARSE_ERROR : error, keyPair);
+          return;
+        }
 
         if (!header) {
           try {
-            if (buffer.length >= 12) {
+            if (isNaN(headerLength) && buffer.length >= 12) {
               // Read the 4-byte header length, which is after the initial 8
               // magic bytes of 'miniLock'.
               headerLength = buffer.readUIntLE(8, 4, true);
 
-              if (buffer.length >= 12 + headerLength) {
-                // Read the header and parse the JSON object.
-                header = JSON.parse(buffer.slice(12, 12 + headerLength)
-                  .toString());
-
-                if (header.version !== 1) {
-                  throw ERR_UNSUPPORTED_VERSION;
-                }
-
-                if (!validateKey(header.ephemeral)) {
-                  throw ERR_PARSE_ERROR;
-                }
-
-                if (!(decryptInfo = extractDecryptInfo(header, keyPair.secretKey))
-                    || decryptInfo.recipientID !== toId) {
-                  throw ERR_NOT_A_RECIPIENT;
-                }
-
-                // Shift the buffer pointer.
-                buffer = buffer.slice(12 + headerLength);
+              if (headerLength > 0x3fffffff) {
+                throw ERR_PARSE_ERROR;
               }
+
+              buffer = new Buffer(buffer.slice(12));
+            }
+
+            if (!isNaN(headerLength) && buffer.length >= headerLength) {
+              // Read the header and parse the JSON object.
+              header = JSON.parse(buffer.slice(0, headerLength).toString());
+
+              if (header.version !== 1) {
+                throw ERR_UNSUPPORTED_VERSION;
+              }
+
+              if (!validateKey(header.ephemeral)) {
+                throw ERR_PARSE_ERROR;
+              }
+
+              if (!(decryptInfo = extractDecryptInfo(header,
+                        keyPair.secretKey))
+                  || decryptInfo.recipientID !== toId) {
+                throw ERR_NOT_A_RECIPIENT;
+              }
+
+              // Shift the buffer pointer.
+              buffer = buffer.slice(headerLength);
             }
           } catch (error) {
-            callback(error_ = error.name === 'SyntaxError' ? ERR_PARSE_ERROR : error,
-                keyPair);
+            callback(error_ = error.name === 'SyntaxError'
+                ? ERR_PARSE_ERROR : error, keyPair);
             return;
           }
         }
@@ -967,7 +980,8 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
         console.log('--- END MESSAGE ---');
       }
 
-      if (nacl.util.encodeBase64(hash.digest()) !== decryptInfo.fileInfo.fileHash) {
+      if (nacl.util.encodeBase64(hash.digest())
+          !== decryptInfo.fileInfo.fileHash) {
         // The 32-byte BLAKE2 hash of the ciphertext must match the value in
         // the header.
         callback(ERR_MESSAGE_INTEGRITY_CHECK_FAILED, keyPair);
