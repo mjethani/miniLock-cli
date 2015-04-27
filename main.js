@@ -221,6 +221,11 @@ function prompt(label, quiet, callback) {
   });
 }
 
+function temporaryFilename() {
+  return path.resolve(os.tmpdir(),
+      '.mlck-' + hex(nacl.randomBytes(32)) + '.tmp');
+}
+
 function home() {
   return process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
 }
@@ -323,9 +328,7 @@ function getKeyPair(key, salt, callback) {
 function miniLockId(publicKey) {
   var id = new Uint8Array(33);
 
-  for (var i = 0; i < publicKey.length; i++) {
-    id[i] = publicKey[i];
-  }
+  id.set(publicKey);
 
   var hash = new BLAKE2s(1);
   hash.update(publicKey);
@@ -657,8 +660,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 
     // Generate a random filename for writing encrypted chunks to instead of
     // keeping everything in memory.
-    var encryptedDataFile = path.resolve(os.tmpdir(),
-        '.mlck-' + hex(nacl.randomBytes(32)) + '.tmp');
+    var encryptedDataFile = temporaryFilename();
 
     // This is where the encrypted chunks go.
     var encrypted = [];
