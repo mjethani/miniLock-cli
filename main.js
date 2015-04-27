@@ -388,8 +388,12 @@ function readPassphrase(passphrase, minEntropy, callback) {
   }
 }
 
-function publicKeyFromId(id) {
+function keyFromId(id) {
   return new Uint8Array(Base58.decode(id).slice(0, 32));
+}
+
+function keyPairFromSecret(secret) {
+  return nacl.box.keyPair.fromSecretKey(keyFromId(secret));
 }
 
 function validateKey(key) {
@@ -435,7 +439,7 @@ function printId(id) {
   }
 }
 
-function saveId(email, id) {
+function saveId(email, id, keyPair) {
   var profileDirectory = path.resolve(home(), '.mlck');
 
   try {
@@ -446,11 +450,16 @@ function saveId(email, id) {
     }
   }
 
-  var profile = {
-    version: '0.1',
-    email: email,
-    id: id
-  };
+  var profile = { version: '0.1' };
+
+  if (keyPair) {
+    // Store only the secret key. If it's compromised, you have to get a new
+    // one. No other information is leaked.
+    profile.secret = miniLockId(keyPair.secretKey);
+  } else {
+    profile.email = email;
+    profile.id = id;
+  }
 
   fs.writeFileSync(path.resolve(profileDirectory, 'profile.json'),
       JSON.stringify(profile));
@@ -493,7 +502,7 @@ function makeHeader(ids, senderInfo, fileInfo) {
     debug("Adding recipient " + id);
 
     var nonce = nacl.randomBytes(24);
-    var publicKey = publicKeyFromId(id);
+    var publicKey = keyFromId(id);
 
     debug("Using nonce " + hex(nonce));
 
@@ -544,7 +553,7 @@ function extractDecryptInfo(header, secretKey) {
 
       decryptInfo.fileInfo = nacl.util.decodeBase64(decryptInfo.fileInfo);
       decryptInfo.fileInfo = nacl.box.open(decryptInfo.fileInfo, nonce,
-          publicKeyFromId(decryptInfo.senderID), secretKey);
+          keyFromId(decryptInfo.senderID), secretKey);
 
       decryptInfo.fileInfo = JSON.parse(
           nacl.util.encodeUTF8(decryptInfo.fileInfo)
@@ -618,19 +627,33 @@ function decryptChunk(chunk, decryptor, output, hash) {
 }
 
 function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
-    anonymous, checkId, callback) {
+    anonymous, checkId, keyPair, callback) {
   debug("Begin file encryption");
 
-  if (anonymous) {
-    // Generate a random passphrase.
-    email = 'Anonymous';
-    passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
+  var keyPairFunc = null;
+
+  if (anonymous || !keyPair) {
+    if (anonymous) {
+      // Generate a random passphrase.
+      email = 'Anonymous';
+      passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
+    }
+
+    debug("Generating key pair with email " + email
+        + " and passphrase " + passphrase);
+
+    keyPairFunc = function (callback) {
+      getKeyPair(passphrase, email, callback);
+    };
+  } else {
+    keyPairFunc = function (callback) {
+      async(function () {
+        callback(keyPair);
+      });
+    };
   }
 
-  debug("Generating key pair with email " + email
-      + " and passphrase " + passphrase);
-
-  getKeyPair(passphrase, email, function (keyPair) {
+  keyPairFunc(function (keyPair) {
     debug("Our public key is " + hex(keyPair.publicKey));
     debug("Our secret key is " + hex(keyPair.secretKey));
 
@@ -821,13 +844,28 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
   });
 }
 
-function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
+function decryptFile(email, passphrase, file, outputFile, checkId, keyPair,
+    callback) {
   debug("Begin file decryption");
 
-  debug("Generating key pair with email " + email
-      + " and passphrase " + passphrase);
+  var keyPairFunc = null;
 
-  getKeyPair(passphrase, email, function (keyPair) {
+  if (!keyPair) {
+    debug("Generating key pair with email " + email
+        + " and passphrase " + passphrase);
+
+    keyPairFunc = function (callback) {
+      getKeyPair(passphrase, email, callback);
+    };
+  } else {
+    keyPairFunc = function (callback) {
+      async(function () {
+        callback(keyPair);
+      });
+    };
+  }
+
+  keyPairFunc(function (keyPair) {
     debug("Our public key is " + hex(keyPair.publicKey));
     debug("Our secret key is " + hex(keyPair.secretKey));
 
@@ -1023,6 +1061,7 @@ function handleIdCommand() {
   var defaultOptions = {
     'passphrase':      null,
     'save':            false,
+    'save-key':        false,
   };
 
   var shortcuts = {
@@ -1039,12 +1078,17 @@ function handleIdCommand() {
   var passphrase = options.passphrase;
 
   var save = options.save;
+  var saveKey = options['save-key'];
 
   if (email === undefined) {
     loadProfile();
 
-    if (profile) {
-      printId(profile.id);
+    if (profile && (profile.id || profile.secret)) {
+      if (profile.id) {
+        printId(profile.id);
+      } else {
+        printId(miniLockId(keyPairFromSecret(profile.secret).publicKey));
+      }
     } else {
       console.error('No profile data available.');
     }
@@ -1060,13 +1104,15 @@ function handleIdCommand() {
 
     debug("Using passphrase " + passphrase);
 
-    generateId(email, passphrase, function (error, id) {
+    generateId(email, passphrase, function (error, id, keyPair) {
       if (error) {
         logError(error);
         die();
       }
 
-      if (save) {
+      if (saveKey) {
+        saveId(email, id, keyPair);
+      } else if (save) {
         saveId(email, id);
       }
 
@@ -1118,32 +1164,40 @@ function handleEncryptCommand() {
 
   loadProfile();
 
-  if (typeof email !== 'string' && profile) {
-    email = profile.email;
+  var keyPair = !anonymous && typeof email !== 'string'
+    && profile && profile.secret && keyPairFromSecret(profile.secret);
+
+  if (!keyPair) {
+    if (typeof email !== 'string' && profile) {
+      email = profile.email;
+    }
+
+    if (!anonymous && typeof email !== 'string') {
+      die('Email required.');
+    }
+
+    if (!anonymous && typeof passphrase !== 'string' && !process.stdin.isTTY) {
+      die('No passphrase given; no terminal available.');
+    }
   }
 
-  if (!anonymous && typeof email !== 'string') {
-    die('Email required.');
-  }
+  var checkId = !anonymous && !keyPair && profile && email === profile.email
+    && profile.id;
 
-  if (!anonymous && typeof passphrase !== 'string' && !process.stdin.isTTY) {
-    die('No passphrase given; no terminal available.');
-  }
-
-  var checkId = !anonymous && profile && email === profile.email && profile.id;
-
-  readPassphrase(anonymous ? '' : passphrase, 0, function (error, passphrase) {
+  readPassphrase(anonymous || keyPair ? '' : passphrase, 0,
+      function (error, passphrase) {
     if (error) {
       logError(error);
       die();
     }
 
-    if (!anonymous) {
+    if (!anonymous && !keyPair) {
       debug("Using passphrase " + passphrase);
     }
 
     encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
-        anonymous, checkId, function (error, keyPair, length, filename) {
+        anonymous, checkId, keyPair,
+        function (error, keyPair, length, filename) {
       if (error) {
         if (error === ERR_ID_CHECK_FAILED) {
           console.error('Incorrect passphrase for ' + email);
@@ -1196,21 +1250,26 @@ function handleDecryptCommand() {
 
   loadProfile();
 
-  if (typeof email !== 'string' && profile) {
-    email = profile.email;
+  var keyPair = typeof email !== 'string'
+    && profile && profile.secret && keyPairFromSecret(profile.secret);
+
+  if (!keyPair) {
+    if (typeof email !== 'string' && profile) {
+      email = profile.email;
+    }
+
+    if (typeof email !== 'string') {
+      die('Email required.');
+    }
+
+    if (typeof passphrase !== 'string' && !process.stdin.isTTY) {
+      die('No passphrase given; no terminal available.');
+    }
   }
 
-  if (typeof email !== 'string') {
-    die('Email required.');
-  }
+  var checkId = !keyPair && profile && email === profile.email && profile.id;
 
-  if (typeof passphrase !== 'string' && !process.stdin.isTTY) {
-    die('No passphrase given; no terminal available.');
-  }
-
-  var checkId = profile && email === profile.email && profile.id;
-
-  readPassphrase(passphrase, 0, function (error, passphrase) {
+  readPassphrase(keyPair ? '' : passphrase, 0, function (error, passphrase) {
     if (error) {
       logError(error);
       die();
@@ -1218,7 +1277,7 @@ function handleDecryptCommand() {
 
     debug("Using passphrase " + passphrase);
 
-    decryptFile(email, passphrase, file, outputFile, checkId,
+    decryptFile(email, passphrase, file, outputFile, checkId, keyPair,
         function (error, keyPair, length, filename, senderId,
           originalFilename) {
       if (error) {
