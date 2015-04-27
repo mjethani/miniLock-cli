@@ -1011,8 +1011,9 @@ function decryptFile(email, passphrase, file, outputFile, checkId, callback) {
 
         callback(null, keyPair, outputByteCount, outputFilename,
             decryptInfo.senderID,
-            originalFilename !== Array(256 + 1).join('\0')
-              ? originalFilename : null);
+            // Strip out any trailing null characters.
+            (originalFilename + '\0').slice(0, originalFilename.indexOf('\0'))
+          );
       }
     });
   });
