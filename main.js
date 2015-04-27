@@ -56,10 +56,6 @@ var profile = null;
 
 var dictionary = null;
 
-function isArray(value) {
-  return Object.prototype.toString.call(value) === '[object Array]';
-}
-
 function hex(data) {
   return new Buffer(data).toString('hex');
 }
@@ -575,7 +571,7 @@ function encryptChunk(chunk, encryptor, output, hash) {
 
     debug("Encrypted chunk " + hex(chunk));
 
-    if (isArray(output)) {
+    if (Array.isArray(output)) {
       output.push(new Buffer(chunk));
     } else {
       output.write(new Buffer(chunk));
@@ -603,7 +599,7 @@ function decryptChunk(chunk, decryptor, output, hash) {
     if (decrypted) {
       debug("Decrypted chunk " + hex(decrypted));
 
-      if (isArray(output)) {
+      if (Array.isArray(output)) {
         output.push(new Buffer(decrypted));
       } else {
         output.write(new Buffer(decrypted));
@@ -705,7 +701,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         // If input exceeds the 4K threshold (picked arbitrarily), switch from
         // writing to an array to writing to a file. This way we can do
         // extremely large files.
-        if (inputByteCount > 4 * 1024 && isArray(encrypted)) {
+        if (inputByteCount > 4 * 1024 && Array.isArray(encrypted)) {
           var stream = fs.createWriteStream(encryptedDataFile);
 
           encrypted.forEach(function (chunk) {
@@ -777,12 +773,12 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 
       outputByteCount += outputHeader.length;
 
-      if (isArray(encrypted)) {
+      if (Array.isArray(encrypted)) {
         encrypted.end = async;
       }
 
       encrypted.end(function () {
-        if (isArray(encrypted)) {
+        if (Array.isArray(encrypted)) {
           // Wrap array into a stream-like interface.
           encrypted = readableArray(encrypted);
         } else {
