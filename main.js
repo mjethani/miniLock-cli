@@ -1061,9 +1061,10 @@ function handleIdCommand() {
   var defaultOptions = {
     'email':           null,
     'passphrase':      null,
+    'secret':          null,
+    'anonymous':       false,
     'save':            false,
     'save-key':        false,
-    'secret':          null,
   };
 
   var shortcuts = {
@@ -1080,14 +1081,22 @@ function handleIdCommand() {
   var email = options['...'][0] || options.email;
   var passphrase = options.passphrase;
 
+  var secret = options.secret;
+
+  var anonymous = options.anonymous;
+
   var save = options.save;
   var saveKey = options['save-key'];
 
-  var secret = options.secret;
-
   var keyPair = null;
 
-  if (typeof email !== 'string' || typeof secret === 'string') {
+  if (anonymous) {
+    // Generate a random passphrase.
+    email = 'Anonymous';
+    passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
+  }
+
+  if (typeof email !== 'string' || (!anonymous && typeof secret === 'string')) {
     if (typeof secret !== 'string') {
       loadProfile();
 
