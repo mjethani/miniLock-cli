@@ -1129,6 +1129,7 @@ function handleEncryptCommand() {
     'output-file':     null,
     'self':            false,
     'anonymous':       false,
+    'secret':          null,
   };
 
   var shortcuts = {
@@ -1156,16 +1157,22 @@ function handleEncryptCommand() {
 
   var anonymous = options.anonymous;
 
+  var secret = options.secret;
+
   ids.forEach(function (id) {
     if (!validateId(id)) {
       die(id + " doesn't look like a valid miniLock ID.");
     }
   });
 
-  loadProfile();
+  if (typeof secret !== 'string') {
+    loadProfile();
+
+    secret = profile && profile.secret || null;
+  }
 
   var keyPair = !anonymous && typeof email !== 'string'
-    && profile && profile.secret && keyPairFromSecret(profile.secret);
+    && secret && keyPairFromSecret(secret);
 
   if (!keyPair) {
     if (typeof email !== 'string' && profile) {
@@ -1227,6 +1234,7 @@ function handleDecryptCommand() {
     'passphrase':      null,
     'file':            null,
     'output-file':     null,
+    'secret':          null,
   };
 
   var shortcuts = {
@@ -1248,10 +1256,16 @@ function handleDecryptCommand() {
   var file = options.file;
   var outputFile = options['output-file'];
 
-  loadProfile();
+  var secret = options.secret;
+
+  if (typeof secret !== 'string') {
+    loadProfile();
+
+    secret = profile && profile.secret || null;
+  }
 
   var keyPair = typeof email !== 'string'
-    && profile && profile.secret && keyPairFromSecret(profile.secret);
+    && secret && keyPairFromSecret(secret);
 
   if (!keyPair) {
     if (typeof email !== 'string' && profile) {
