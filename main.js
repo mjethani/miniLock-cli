@@ -1063,6 +1063,7 @@ function handleIdCommand() {
     'passphrase':      null,
     'save':            false,
     'save-key':        false,
+    'secret':          null,
   };
 
   var shortcuts = {
@@ -1082,15 +1083,27 @@ function handleIdCommand() {
   var save = options.save;
   var saveKey = options['save-key'];
 
-  if (typeof email !== 'string') {
-    loadProfile();
+  var secret = options.secret;
 
-    if (profile && (profile.id || profile.secret)) {
-      if (profile.id) {
-        printId(profile.id);
-      } else {
-        printId(miniLockId(keyPairFromSecret(profile.secret).publicKey));
+  var keyPair = null;
+
+  if (typeof email !== 'string' || typeof secret === 'string') {
+    if (typeof secret !== 'string') {
+      loadProfile();
+
+      secret = profile && profile.secret || null;
+    }
+
+    if (profile && profile.id) {
+      printId(profile.id);
+    } else if (secret) {
+      keyPair = keyPairFromSecret(secret);
+
+      if (saveKey) {
+        saveId(null, null, keyPair);
       }
+
+      printId(miniLockId(keyPair.publicKey));
     } else {
       console.error('No profile data available.');
     }
