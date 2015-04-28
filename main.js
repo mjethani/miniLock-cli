@@ -1059,12 +1059,14 @@ function decryptFile(email, passphrase, file, outputFile, checkId, keyPair,
 
 function handleIdCommand() {
   var defaultOptions = {
+    'email':           null,
     'passphrase':      null,
     'save':            false,
     'save-key':        false,
   };
 
   var shortcuts = {
+    '-e': '--email=',
     '-P': '--passphrase='
   };
 
@@ -1074,13 +1076,13 @@ function handleIdCommand() {
     die("Unknown option '" + options['!?'][0] + "'.");
   }
 
-  var email = options['...'][0];
+  var email = options['...'][0] || options.email;
   var passphrase = options.passphrase;
 
   var save = options.save;
   var saveKey = options['save-key'];
 
-  if (email === undefined) {
+  if (typeof email !== 'string') {
     loadProfile();
 
     if (profile && (profile.id || profile.secret)) {
