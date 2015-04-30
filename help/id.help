@@ -4,5 +4,12 @@ Generate a miniLock ID
 
 e.g.
 
-  mlck id alice@example.com
+ (1)  mlck id alice@example.com --save
+
+    Generate a miniLock ID for alice@example.com and save it to
+    your profile.
+
+ (2)  mlck id
+
+    Print your miniLock ID.
 

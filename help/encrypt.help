@@ -7,5 +7,14 @@ Encrypt a file
 
 e.g.
 
-  mlck encrypt --file=message.txt psciyAZ9aqFPqS5c27k4VYkNSnbt5ACfMpUB5tnQme9Px
+ (1)  mlck encrypt psciyAZ9aqFPqS5c27k4VYkNSnbt5ACfMpUB5tnQme9Px > cat.gif
+
+    Encrypt a message to the miniLock ID
+    psciyAZ9aqFPqS5c27k4VYkNSnbt5ACfMpUB5tnQme9Px and save the
+    output in a file called cat.gif.
+
+ (2)  mlck encrypt --email=bob@example.com --self --file=passport.jpeg
+
+    Encrypt the file passport.jpeg from bob@example.com to
+    bob@example.com.
 

@@ -2,7 +2,3 @@ usage: mlck help [<topic>]
 
 Print help on a topic
 
-e.g.
-
-  mlck help help
-

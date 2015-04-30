@@ -6,5 +6,7 @@ Decrypt a file
 
 e.g.
 
-  mlck decrypt --file=message.txt.minilock
+ (1)  mlck decrypt --file=cat.gif
+
+    Decrypt the file cat.gif.
 
