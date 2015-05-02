@@ -1,5 +1,5 @@
 usage: mlck encrypt [<id> ...] [--self] [--email=<email>]
-                    [--file=<file>] [--output-file=<output-file>]
+                    [--file=<file>] [--output-file=<output-file>] [--armor]
                     [--passphrase=<passphrase>]
                     [--anonymous]
 

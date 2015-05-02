@@ -1,5 +1,5 @@
 usage: mlck decrypt [--email=<email>]
-                    [--file=<file>] [--output-file=<output-file>]
+                    [--file=<file>] [--output-file=<output-file>] [--armor]
                     [--passphrase=<passphrase>]
 
 Decrypt a file

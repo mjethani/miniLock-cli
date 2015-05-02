@@ -1,10 +1,10 @@
 usage: mlck id      [<email>] [--passphrase=<passphrase>] [--save]
        mlck encrypt [<id> ...] [--self] [--email=<email>]
-                    [--file=<file>] [--output-file=<output-file>]
+                    [--file=<file>] [--output-file=<output-file>] [--armor]
                     [--passphrase=<passphrase>]
                     [--anonymous]
        mlck decrypt [--email=<email>]
-                    [--file=<file>] [--output-file=<output-file>]
+                    [--file=<file>] [--output-file=<output-file>] [--armor]
                     [--passphrase=<passphrase>]
        mlck help    [<topic>]
        mlck --version
