@@ -51,7 +51,7 @@ var ERR_NOT_A_RECIPIENT = 'Not a recipient';
 var ERR_MESSAGE_INTEGRITY_CHECK_FAILED = 'Message integrity check failed';
 
 var ENCRYPTION_CHUNK_SIZE = 256;
-var ASCII_ARMOR_WIDTH = 50;
+var ARMOR_WIDTH = 64;
 
 var profile = null;
 
@@ -497,15 +497,15 @@ function asciiArmor(data, indent) {
 
   if ((indent = Math.max(0, indent | 0)) > 0) {
     // Indent first line.
-    lines.push(ascii.slice(0, ASCII_ARMOR_WIDTH - indent));
+    lines.push(ascii.slice(0, ARMOR_WIDTH - indent));
 
-    ascii = ascii.slice(ASCII_ARMOR_WIDTH - indent);
+    ascii = ascii.slice(ARMOR_WIDTH - indent);
   }
 
   while (ascii.length > 0) {
-    lines.push(ascii.slice(0, ASCII_ARMOR_WIDTH));
+    lines.push(ascii.slice(0, ARMOR_WIDTH));
 
-    ascii = ascii.slice(ASCII_ARMOR_WIDTH);
+    ascii = ascii.slice(ARMOR_WIDTH);
   }
 
   return lines.join('\n');
@@ -771,11 +771,6 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
 
       encryptor.clean();
 
-      var bufferPending = new Buffer(0);
-
-      var ascii = null;
-      var asciiIndent = 0;
-
       // This is the 32-byte BLAKE2 hash of all the ciphertext.
       var fileHash = hash.digest();
 
@@ -816,6 +811,10 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
 
       var outputByteCount = 0;
 
+      var buffer = new Buffer(0);
+
+      var asciiIndent = 0;
+
       var outputHeader = Buffer.concat([
         // The file always begins with the magic bytes 0x6d696e694c6f636b.
         new Buffer('miniLock'), headerLength, new Buffer(header)
@@ -824,31 +823,24 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
       if (armor) {
         // https://tools.ietf.org/html/rfc4880#section-6
 
-        ascii = asciiArmor(outputHeader.slice(0, outputHeader.length
-                - outputHeader.length % 3));
-        bufferPending = outputHeader.slice(outputHeader.length
+        buffer = outputHeader.slice(outputHeader.length
               - outputHeader.length % 3);
+        outputHeader = asciiArmor(outputHeader.slice(0, outputHeader.length
+                - outputHeader.length % 3));
 
-        asciiIndent = ascii.length % (ASCII_ARMOR_WIDTH + 1);
+        asciiIndent = outputHeader.length % (ARMOR_WIDTH + 1);
 
-        ascii = '-----BEGIN MINILOCK FILE-----\n'
+        outputHeader = '-----BEGIN MINILOCK FILE-----\n'
           + 'Version: miniLock-cli v' + _version + '\n'
           + '\n'
-          + ascii;
-
-        if (outputStream) {
-          outputStream.write(ascii);
-        }
-
-        outputByteCount += ascii.length;
-
-      } else {
-        if (outputStream) {
-          outputStream.write(outputHeader);
-        }
-
-        outputByteCount += outputHeader.length;
+          + outputHeader;
       }
+
+      if (outputStream) {
+        outputStream.write(outputHeader);
+      }
+
+      outputByteCount += outputHeader.length;
 
       if (Array.isArray(encrypted)) {
         encrypted.end = async;
@@ -874,42 +866,34 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
           var chunk = encrypted.read();
           if (chunk !== null) {
             if (armor) {
-              chunk = Buffer.concat([ bufferPending, chunk ]);
+              chunk = Buffer.concat([ buffer, chunk ]);
 
               var index = chunk.length - chunk.length % 3;
 
-              ascii = asciiArmor(chunk.slice(0, index), asciiIndent);
-              bufferPending = chunk.slice(index);
+              buffer = chunk.slice(index);
+              chunk = asciiArmor(chunk.slice(0, index), asciiIndent);
 
-              asciiIndent = (ascii.length + asciiIndent)
-                % (ASCII_ARMOR_WIDTH + 1);
-
-              if (outputStream) {
-                outputStream.write(ascii);
-              }
-
-              outputByteCount += ascii.length;
-
-            } else {
-              if (outputStream) {
-                outputStream.write(chunk);
-              }
-
-              outputByteCount += chunk.length;
+              asciiIndent = (chunk.length + asciiIndent) % (ARMOR_WIDTH + 1);
             }
+
+            if (outputStream) {
+              outputStream.write(chunk);
+            }
+
+            outputByteCount += chunk.length;
           }
         });
 
         encrypted.on('end', function () {
           if (armor) {
-            ascii = asciiArmor(bufferPending, asciiIndent);
-            ascii += '\n-----END MINILOCK FILE-----\n';
+            var chunk = asciiArmor(buffer, asciiIndent)
+              + '\n-----END MINILOCK FILE-----\n';
 
             if (outputStream) {
-              outputStream.write(ascii);
+              outputStream.write(chunk);
             }
 
-            outputByteCount += ascii.length;
+            outputByteCount += chunk.length;
           }
 
           debug("File encryption complete");
