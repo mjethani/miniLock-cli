@@ -4,19 +4,19 @@
 Version: GnuPG/MacGPG2 v2.0.22 (Darwin)
 Comment: GPGTools - https://gpgtools.org
 
-iQIcBAABCgAGBQJVQA0PAAoJEPvclVzmt0MDkpIP/2MSsepGfkgMBbMr3J4MXbue
-EnkdB8tqD+ufWwaunKj4xebDKPtEfGJpW7wuz/J6pLcGhdcixXXHN3UovgU7rMyQ
-aFkxB7CTmi+/TBjB9nJFgbNwEo93xagq8b00qu0SATf3U7o2yErOSjfhYIt+JL7P
-a59r7NTyyAMolR57Mmyf2OtQ6NpfyqK7vpGVK0+IGU7Bc28iHP+3ILMS8MLiIfj5
-L4HIlLQbeB/BWH01og9Lc69ipmeg3pRsV/Sdj7aDG1ew2+SAl9YTzbVCuLaVBbsz
-iYjj79IPZMq4Sf+hwbmTZzPfN2qgKO8A8C+8qLRykzxuxe/XQ4sfia7mFNvt9c6R
-VH2gLlzRWjAMd3Jc71zSTk7cJZ1mqDzVKgF/e/j8WRq5PMgIekmVCOhHBH7lo8lC
-0GRcGTDlp1l8RAVLaiKcrk2wUG9xO2IY7D4+dXSGNveKhk0lFapB7O6CnPKjZ44/
-XNBw8RDBGWWpP5M0jFRO+3M6BPxpK6K7IIw2K6GIUK+3QzL6pLf2JF/p2yeMAtd1
-Ch/I/n8vtnlEXZf3EFSJhSJgRG0P2MMCEAEp4uEE2QyZfAhYhISKuuhDUH1rpL5Q
-gR387EQ9w4t48rUdkPcAIyRorLDoeTeoWLVLL3E1lhTMpyCFFtH4emEbspEQ3hKa
-QgFGdaZ4vW6u0h22Eaes
-=+Q2b
+iQIcBAABCgAGBQJVRVSgAAoJEPvclVzmt0MDrTcP/jJBzbOnMzn9dP0D0LMqXTZ6
+1HcNKJzCZ0KKXSSW1ZQtYnCC3bRzDDTXMlPFkFuybPCY+m4c/0XfILcB9bPyQ683
+f+C2OHiop+kl/9vJ4S5/x45K5elB09QGRQOHSqF3VupHyADHon3pldXw93wfnHRL
+wR0fElr+P7jGFTHM1A/NC6rbUmFF1/YXt8L4FW/p8TCLuuSZInDLb6oTwtV7vPnU
+bHTrabthZdxisXe0sQWUsj8q1VLb1GUsddZzqyAvse2L+BL+ZdXzCUMkoL0QS8oe
+muxASFyIkXdF6poR1s70m/Cb8itbL8uVP6vX5gNIdLzGdG3PpfZRxE1+4SMk0Prd
+BCJqvp3VHuNINJCyI8OnSKIQgqaOaiRzcYbDEIm9cAqaJgXHOHFd/Ak9jpCqZMYB
+vWdYTDaUXBX5ZVffQqMLJ6VjHuKExdx2l9fG/Dw0rQYFIvSNH6jsaz4B+KIBWJrq
+zfiofpiPhMHjn4sYDu8Lp3CUJj5DliZhnP8zBlK9wKB+6y0XFSFRcDIqJO4aws9n
+b65rxgEgEUNyuIuekV3x3xSq0maRoQ8AqwgzkUgGZueugMs6IePj8RE8abc7Ih0b
+uVZIZhjGLjDDaEktQKJU+cSuf4K3hwQYg/B2cCVF+GGp9cNzNKXyFOs/aFQTjO+z
+ZLHLYsFdJQxmAZzvVblh
+=l9lz
 -----END PGP SIGNATURE-----
 
 ```
@@ -35,14 +35,14 @@ size   exec  file              contents
 4339           README.md       8ed7314580864ac9e0c4778b1101d8217ccde35787ad24da14f12e23e24853ae
 6016           dictionary      a23bd82e1e917dec4a63a92746267d3b3aa92fb0cae7cff7f07aaf30a17a707f
                help/                                                                           
-219              decrypt.help  6b8082d6eb25905d159da48c8022766e9fe798320c02b5b7fc4745f8744744a0
-679              default.help  d9ec43e71b8af33917eb44c3a7e5bbcd1f3ed2e660a2a65f5f6f020463be501c
-310              encrypt.help  6e2260014c1ca24bd00a36468ebe932fa6f06d79e71128b3d866bc0b371b2017
-75               help.help     b131efdb5be0962265704bcd146b05e207231436926bbcf06a24e4c8a21e5148
-122              id.help       4f028b9e0b517c55d68f97405b928ab612dea1380df583848d902b718f7212b3
-36275          main.js         8df1c63f5483c73aa9ebbea004f8a51072bf8b0cd325043f0e9a1c912cfe7763
+251              decrypt.help  79b2a8c4759c7f5c05545e770f25f624bd788cbdcef70b1d3aea3e4b82a15667
+699              default.help  daf2189b2b270559d2c91bffd5c1726a056dba175b00e727f7385cd97b967d84
+610              encrypt.help  d9a07bce15db3a89159b1f432d0444eef53e1bbe80df0d64222ba58f0fd822d6
+51               help.help     a02fd4027119f8d399badf9b24d495d235fc969f9e09efe2e934b1dfee64d1cd
+260              id.help       e8623f98fbcfaf6dab0a17d8605fdbd802ee36848a16836a2d93aa7073a54aeb
+39154          main.js         56559fe196af7ed4e9e4864f33cdc601f2fe40b300e20c32ff856097b4fcf539
 47     x       mlck            ad1d918f07b08400ddd47b71001b6ee4928c5f6bbe50ddb75cb1d024d47dcfbe
-1298           package.json    49144a11c190fcd4c5f8e5888fe3b65e9685e8a84b63deaa41dc24f0c8a26b39
+1298           package.json    8f36a92fe499895daeb41332088077c9d965ea6127dd80a2df9ae1bfceb01d08
 ```
 
 #### Ignore

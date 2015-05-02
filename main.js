@@ -1,10 +1,10 @@
 /*  ----------------------------------------------------------------------------
- *  miniLock-cli v0.2.7
+ *  miniLock-cli v0.2.8
  *  
  *  A command line version of miniLock
  *  
  *  Author:  Manish Jethani (manish.jethani@gmail.com)
- *  Date:    April 29, 2015
+ *  Date:    May 3, 2015
  *  
  *  See 'mlck --help'
  *  
