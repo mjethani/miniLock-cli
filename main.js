@@ -42,7 +42,7 @@ var nacl_     = require('nacl-stream');
 var scrypt    = require('scrypt-async');
 var zxcvbn    = require('zxcvbn');
 
-var debug = function () {};
+var _version = require('./package.json').version;
 
 var ERR_ID_CHECK_FAILED = 'ID check failed';
 var ERR_PARSE_ERROR = 'Parse error';
@@ -51,10 +51,13 @@ var ERR_NOT_A_RECIPIENT = 'Not a recipient';
 var ERR_MESSAGE_INTEGRITY_CHECK_FAILED = 'Message integrity check failed';
 
 var ENCRYPTION_CHUNK_SIZE = 256;
+var ASCII_ARMOR_WIDTH = 50;
 
 var profile = null;
 
 var dictionary = null;
+
+var debug = function () {};
 
 function hex(data) {
   return new Buffer(data).toString('hex');
@@ -487,6 +490,27 @@ function readableArray(array) {
   return fakeReadable;
 }
 
+function asciiArmor(data, indent) {
+  var ascii = new Buffer(data).toString('base64');
+
+  var lines = [];
+
+  if ((indent = Math.max(0, indent | 0)) > 0) {
+    // Indent first line.
+    lines.push(ascii.slice(0, ASCII_ARMOR_WIDTH - indent));
+
+    ascii = ascii.slice(ASCII_ARMOR_WIDTH - indent);
+  }
+
+  while (ascii.length > 0) {
+    lines.push(ascii.slice(0, ASCII_ARMOR_WIDTH));
+
+    ascii = ascii.slice(ASCII_ARMOR_WIDTH);
+  }
+
+  return lines.join('\n');
+}
+
 function makeHeader(ids, senderInfo, fileInfo) {
   var ephemeral = nacl.box.keyPair();
   var header = {
@@ -626,8 +650,8 @@ function decryptChunk(chunk, decryptor, output, hash) {
   return chunk;
 }
 
-function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
-    anonymous, checkId, keyPair, callback) {
+function encryptFile(ids, email, passphrase, file, outputFile, armor,
+    includeSelf, anonymous, checkId, keyPair, callback) {
   debug("Begin file encryption");
 
   var keyPairFunc = null;
@@ -747,6 +771,11 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
 
       encryptor.clean();
 
+      var bufferPending = new Buffer(0);
+
+      var ascii = null;
+      var asciiIndent = 0;
+
       // This is the 32-byte BLAKE2 hash of all the ciphertext.
       var fileHash = hash.digest();
 
@@ -777,12 +806,12 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         debug("Writing to stdout");
       }
 
-      if (typeof filename !== 'string' && process.stdout.isTTY) {
+      if (!armor && typeof filename !== 'string' && process.stdout.isTTY) {
         console.error('WARNING: Not writing output to terminal.');
       }
 
       var outputStream = typeof filename === 'string'
-        ? fs.createWriteStream(filename) : !process.stdout.isTTY
+        ? fs.createWriteStream(filename) : armor || !process.stdout.isTTY
         ? process.stdout : null;
 
       var outputByteCount = 0;
@@ -792,11 +821,34 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         new Buffer('miniLock'), headerLength, new Buffer(header)
       ]);
 
-      if (outputStream) {
-        outputStream.write(outputHeader);
-      }
+      if (armor) {
+        // https://tools.ietf.org/html/rfc4880#section-6
 
-      outputByteCount += outputHeader.length;
+        ascii = asciiArmor(outputHeader.slice(0, outputHeader.length
+                - outputHeader.length % 3));
+        bufferPending = outputHeader.slice(outputHeader.length
+              - outputHeader.length % 3);
+
+        asciiIndent = ascii.length % (ASCII_ARMOR_WIDTH + 1);
+
+        ascii = '-----BEGIN MINILOCK FILE-----\n'
+          + 'Version: miniLock-cli v' + _version + '\n'
+          + '\n'
+          + ascii;
+
+        if (outputStream) {
+          outputStream.write(ascii);
+        }
+
+        outputByteCount += ascii.length;
+
+      } else {
+        if (outputStream) {
+          outputStream.write(outputHeader);
+        }
+
+        outputByteCount += outputHeader.length;
+      }
 
       if (Array.isArray(encrypted)) {
         encrypted.end = async;
@@ -821,15 +873,45 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
         encrypted.on('readable', function () {
           var chunk = encrypted.read();
           if (chunk !== null) {
-            if (outputStream) {
-              outputStream.write(chunk);
-            }
+            if (armor) {
+              chunk = Buffer.concat([ bufferPending, chunk ]);
 
-            outputByteCount += chunk.length;
+              var index = chunk.length - chunk.length % 3;
+
+              ascii = asciiArmor(chunk.slice(0, index), asciiIndent);
+              bufferPending = chunk.slice(index);
+
+              asciiIndent = (ascii.length + asciiIndent)
+                % (ASCII_ARMOR_WIDTH + 1);
+
+              if (outputStream) {
+                outputStream.write(ascii);
+              }
+
+              outputByteCount += ascii.length;
+
+            } else {
+              if (outputStream) {
+                outputStream.write(chunk);
+              }
+
+              outputByteCount += chunk.length;
+            }
           }
         });
 
         encrypted.on('end', function () {
+          if (armor) {
+            ascii = asciiArmor(bufferPending, asciiIndent);
+            ascii += '\n-----END MINILOCK FILE-----\n';
+
+            if (outputStream) {
+              outputStream.write(ascii);
+            }
+
+            outputByteCount += ascii.length;
+          }
+
           debug("File encryption complete");
 
           async(function () {
@@ -844,8 +926,8 @@ function encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
   });
 }
 
-function decryptFile(email, passphrase, file, outputFile, checkId, keyPair,
-    callback) {
+function decryptFile(email, passphrase, file, outputFile, armor, checkId,
+    keyPair, callback) {
   debug("Begin file decryption");
 
   var keyPairFunc = null;
@@ -877,6 +959,10 @@ function decryptFile(email, passphrase, file, outputFile, checkId, keyPair,
       callback(ERR_ID_CHECK_FAILED, keyPair);
       return;
     }
+
+    var asciiBuffer = '';
+
+    var armorHeaders = null;
 
     var headerLength = NaN;
     var header = null;
@@ -926,6 +1012,34 @@ function decryptFile(email, passphrase, file, outputFile, checkId, keyPair,
       }
 
       if (chunk !== null) {
+        if (armor) {
+          asciiBuffer += chunk.toString();
+
+          chunk = new Buffer(0);
+
+          var index = -1;
+
+          if (!armorHeaders && asciiBuffer.slice(0, 30)
+              === '-----BEGIN MINILOCK FILE-----\n'
+              && (index = asciiBuffer.indexOf('\n\n')) !== -1) {
+            armorHeaders = asciiBuffer.slice(30, index).toString().split('\n');
+
+            asciiBuffer = asciiBuffer.slice(index + 2);
+          }
+
+          if (armorHeaders) {
+            // Strip out newlines and other whitespace.
+            asciiBuffer = asciiBuffer.replace(/\s+/g, '');
+
+            // Decode as many 32-bit groups as possible now and leave the
+            // balance for later.
+            index = asciiBuffer.length - asciiBuffer.length % 4;
+
+            chunk = new Buffer(asciiBuffer.slice(0, index), 'base64');
+            asciiBuffer = asciiBuffer.slice(index);
+          }
+        }
+
         try {
           // Read chunk into buffer.
           buffer = Buffer.concat([ buffer, chunk ]);
@@ -1149,18 +1263,20 @@ function handleEncryptCommand() {
   var defaultOptions = {
     'email':           null,
     'passphrase':      null,
+    'secret':          null,
     'file':            null,
     'output-file':     null,
+    'armor':           false,
     'self':            false,
     'anonymous':       false,
-    'secret':          null,
   };
 
   var shortcuts = {
     '-e': '--email=',
     '-P': '--passphrase=',
     '-f': '--file=',
-    '-o': '--output-file='
+    '-o': '--output-file=',
+    '-a': '--armor',
   };
 
   var options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
@@ -1174,14 +1290,16 @@ function handleEncryptCommand() {
   var email = options.email;
   var passphrase = options.passphrase;
 
+  var secret = options.secret;
+
   var file = options.file;
   var outputFile = options['output-file'];
+
+  var armor = options.armor;
 
   var includeSelf = options['self'];
 
   var anonymous = options.anonymous;
-
-  var secret = options.secret;
 
   ids.forEach(function (id) {
     if (!validateId(id)) {
@@ -1226,7 +1344,7 @@ function handleEncryptCommand() {
       debug("Using passphrase " + passphrase);
     }
 
-    encryptFile(ids, email, passphrase, file, outputFile, includeSelf,
+    encryptFile(ids, email, passphrase, file, outputFile, armor, includeSelf,
         anonymous, checkId, keyPair,
         function (error, keyPair, length, filename) {
       if (error) {
@@ -1256,16 +1374,18 @@ function handleDecryptCommand() {
   var defaultOptions = {
     'email':           null,
     'passphrase':      null,
+    'secret':          null,
     'file':            null,
     'output-file':     null,
-    'secret':          null,
+    'armor':           false,
   };
 
   var shortcuts = {
     '-e': '--email=',
     '-P': '--passphrase=',
     '-f': '--file=',
-    '-o': '--output-file='
+    '-o': '--output-file=',
+    '-a': '--armor',
   };
 
   var options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
@@ -1277,10 +1397,12 @@ function handleDecryptCommand() {
   var email = options.email;
   var passphrase = options.passphrase;
 
+  var secret = options.secret;
+
   var file = options.file;
   var outputFile = options['output-file'];
 
-  var secret = options.secret;
+  var armor = options.armor;
 
   if (typeof secret !== 'string') {
     loadProfile();
@@ -1315,7 +1437,7 @@ function handleDecryptCommand() {
 
     debug("Using passphrase " + passphrase);
 
-    decryptFile(email, passphrase, file, outputFile, checkId, keyPair,
+    decryptFile(email, passphrase, file, outputFile, armor, checkId, keyPair,
         function (error, keyPair, length, filename, senderId,
           originalFilename) {
       if (error) {
@@ -1360,7 +1482,7 @@ function handleHelpCommand() {
 }
 
 function handleVersionCommand() {
-  console.log('miniLock-cli v' + require('./package.json').version);
+  console.log('miniLock-cli v' + _version);
 }
 
 function handleLicenseCommand() {
