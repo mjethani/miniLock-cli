@@ -1,22 +1,21 @@
 ##### Signed by https://keybase.io/mj
 ```
 -----BEGIN PGP SIGNATURE-----
-Version: GnuPG/MacGPG2 v2.0.22 (Darwin)
 Comment: GPGTools - https://gpgtools.org
 
-iQIcBAABCgAGBQJVRVSgAAoJEPvclVzmt0MDrTcP/jJBzbOnMzn9dP0D0LMqXTZ6
-1HcNKJzCZ0KKXSSW1ZQtYnCC3bRzDDTXMlPFkFuybPCY+m4c/0XfILcB9bPyQ683
-f+C2OHiop+kl/9vJ4S5/x45K5elB09QGRQOHSqF3VupHyADHon3pldXw93wfnHRL
-wR0fElr+P7jGFTHM1A/NC6rbUmFF1/YXt8L4FW/p8TCLuuSZInDLb6oTwtV7vPnU
-bHTrabthZdxisXe0sQWUsj8q1VLb1GUsddZzqyAvse2L+BL+ZdXzCUMkoL0QS8oe
-muxASFyIkXdF6poR1s70m/Cb8itbL8uVP6vX5gNIdLzGdG3PpfZRxE1+4SMk0Prd
-BCJqvp3VHuNINJCyI8OnSKIQgqaOaiRzcYbDEIm9cAqaJgXHOHFd/Ak9jpCqZMYB
-vWdYTDaUXBX5ZVffQqMLJ6VjHuKExdx2l9fG/Dw0rQYFIvSNH6jsaz4B+KIBWJrq
-zfiofpiPhMHjn4sYDu8Lp3CUJj5DliZhnP8zBlK9wKB+6y0XFSFRcDIqJO4aws9n
-b65rxgEgEUNyuIuekV3x3xSq0maRoQ8AqwgzkUgGZueugMs6IePj8RE8abc7Ih0b
-uVZIZhjGLjDDaEktQKJU+cSuf4K3hwQYg/B2cCVF+GGp9cNzNKXyFOs/aFQTjO+z
-ZLHLYsFdJQxmAZzvVblh
-=l9lz
+iQIcBAABCgAGBQJVwwI3AAoJEPvclVzmt0MDHusQAMTGj+UkN2Y1kfx29UeGfS5O
++F/xJASkKnsa/9cfzjxR+uKGzlJiIn+sv7BlJc/vtgvvKa15crHPNHQ5OmjowBmG
+XNpCL9o9VhqFjqqka+WxV1szkYnz7xCa5Hxd7mDYuQENhBi3VYxVrqr6W5dQaJAR
+BHwpVQdTYNA5lm8BAQg/aXn9D03X+qDtKCtFi2z8jWP0V5zrxIC15YkwMm6SK6Cg
+DVMDnfaJ/+9aJsR78B/yt/xjbGvRz5TvyhQqOwSPoTILSkvF3mON9pb9t6bExP33
+LKMuOW8KMle3TrI9Bp5VA2i7gYxxAbtgl854ZUZ1NuXJIyj/enY5xltjF8aNzoD4
+1y6QmlnYy2UrCjzB2YP1eB9W5VEyIf80s72FZpz7ADV00wvHn3lWR6dYiAXoH0Y7
+rCdIObTkjPd5a2jbl5DAHfTM8qwyN5Wx6kLeJqQaOynyJg6AAXIxiEObaL9+GMq1
+lnbBS5Co3tngWkZa3/C4uQQ49zgjFi4I2daSHXu7p9IU/YfrvK/YttWwfezAKwVs
+QxaDmWVAJMoSvq3BKzrI6ngkMBFr6SJU/JhYJWSWCf4UQv0OaYDxwnyfhx0pcNDw
++WfpwpKZtr4wX04o+Y9K7n9gRs3DPFXMCeAEDdJsmlXvrV1RiyJ9sW2cIxH0Ufoa
+oIfvXQKPg9YjXRhPWlxM
+=hoYZ
 -----END PGP SIGNATURE-----
 
 ```
@@ -31,8 +30,6 @@ ZLHLYsFdJQxmAZzvVblh
 size   exec  file              contents                                                        
              ./                                                                                
 87             .kbignore       5f9f9b495e96f1c46eb15bd35e3d0ddd77841af255b954e9f203e791abab16e4
-732            LICENSE         e7fa0c5707aa3eae23e841a73ea57cda21f3bd87b90ba3ea254ca5bdec29d386
-4339           README.md       8ed7314580864ac9e0c4778b1101d8217ccde35787ad24da14f12e23e24853ae
 6016           dictionary      a23bd82e1e917dec4a63a92746267d3b3aa92fb0cae7cff7f07aaf30a17a707f
                help/                                                                           
 251              decrypt.help  79b2a8c4759c7f5c05545e770f25f624bd788cbdcef70b1d3aea3e4b82a15667
@@ -40,9 +37,11 @@ size   exec  file              contents
 610              encrypt.help  d9a07bce15db3a89159b1f432d0444eef53e1bbe80df0d64222ba58f0fd822d6
 51               help.help     a02fd4027119f8d399badf9b24d495d235fc969f9e09efe2e934b1dfee64d1cd
 260              id.help       e8623f98fbcfaf6dab0a17d8605fdbd802ee36848a16836a2d93aa7073a54aeb
-39154          main.js         56559fe196af7ed4e9e4864f33cdc601f2fe40b300e20c32ff856097b4fcf539
+732            LICENSE         e7fa0c5707aa3eae23e841a73ea57cda21f3bd87b90ba3ea254ca5bdec29d386
+39157          main.js         b907f461b6aeb37762485fc027d5247de38e8b265bcf5880295c99ac03a3f4bc
 47     x       mlck            ad1d918f07b08400ddd47b71001b6ee4928c5f6bbe50ddb75cb1d024d47dcfbe
-1298           package.json    8f36a92fe499895daeb41332088077c9d965ea6127dd80a2df9ae1bfceb01d08
+1208           package.json    4f9f450f7d8bc0dd4e632db689ee46d9b6c53509a84d1b97729074ca4005d13e
+4339           README.md       dbb6fc6a814445953d46ecd7ddaadb9ce17cb6686c81c956121ff096c3c33b28
 ```
 
 #### Ignore
