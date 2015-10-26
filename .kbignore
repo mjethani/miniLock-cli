@@ -1,4 +1,5 @@
 node_modules
+build.js.map
 Makefile
 .npmignore
 .gitignore
@@ -9,3 +10,4 @@ Makefile
 *.minilock
 *.log
 
+.git

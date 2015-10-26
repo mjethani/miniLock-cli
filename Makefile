@@ -1,4 +1,10 @@
-all: SIGNED.md
+all: build
+
+build watch: babel_flags += -s
+watch: babel_flags += -w
+
+build watch:
+	babel $(babel_flags) -o build.js main.js
 
 $(VERSION):
 	bash version.sh $(VERSION)
@@ -6,17 +12,18 @@ $(VERSION):
 version: $(VERSION)
 
 .npmignore: .gitignore
-	sort -ru .gitignore > .npmignore
+	sort -ru .gitignore | grep -v '^build.js$$' > .npmignore
 	echo '.gitignore .npmignore Makefile *.sh' | tr ' ' '\n' >> .npmignore
 
 .kbignore: .npmignore
 	sort -ru .npmignore > .kbignore
+	echo .git >> .kbignore
 
-SIGNED.md: .kbignore
-	keybase dir sign
+SIGNED.md sign: .kbignore
+	keybase dir sign -p kb
 
 verify:
-	keybase dir verify
+	keybase dir verify -p kb
 
 ifdef VERSION
 tag: SIGNED.md
@@ -27,5 +34,5 @@ endif
 clean:
 	git checkout SIGNED.md
 
-.PHONY: clean version SIGNED.md verify tag
+.PHONY: clean version build watch sign verify tag
 
