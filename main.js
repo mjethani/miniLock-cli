@@ -29,48 +29,42 @@
  *  IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *  ------------------------------------------------------------------------- */
 
-var fs        = require('fs');
-var os        = require('os');
-var path      = require('path');
-var readline  = require('readline');
-var stream    = require('stream');
+import fs       from 'fs';
+import os       from 'os';
+import path     from 'path';
+import readline from 'readline';
+import stream   from 'stream';
 
-var BLAKE2s   = require('blake2s-js');
-var Base58    = require('bs58');
-var nacl      = require('tweetnacl');
-var nacl_     = require('nacl-stream');
-var scrypt    = require('scrypt-async');
-var zxcvbn    = require('zxcvbn');
+import BLAKE2s  from 'blake2s-js';
+import Base58   from 'bs58';
+import nacl     from 'tweetnacl';
+import nacl_    from 'nacl-stream';
+import scrypt   from 'scrypt-async';
+import zxcvbn   from 'zxcvbn';
 
-var _version = require('./package.json').version;
+const _version = require('./package.json').version;
 
-var ERR_ID_CHECK_FAILED = 'ID check failed';
-var ERR_PARSE_ERROR = 'Parse error';
-var ERR_UNSUPPORTED_VERSION = 'Unsupported version';
-var ERR_NOT_A_RECIPIENT = 'Not a recipient';
-var ERR_MESSAGE_INTEGRITY_CHECK_FAILED = 'Message integrity check failed';
+const ERR_ID_CHECK_FAILED = 'ID check failed';
+const ERR_PARSE_ERROR = 'Parse error';
+const ERR_UNSUPPORTED_VERSION = 'Unsupported version';
+const ERR_NOT_A_RECIPIENT = 'Not a recipient';
+const ERR_MESSAGE_INTEGRITY_CHECK_FAILED = 'Message integrity check failed';
 
-var ENCRYPTION_CHUNK_SIZE = 256;
-var ARMOR_WIDTH = 64;
+const ENCRYPTION_CHUNK_SIZE = 256;
+const ARMOR_WIDTH = 64;
 
-var profile = null;
+let profile = null;
 
-var dictionary = null;
+let dictionary = null;
 
-var debug = function () {};
+let debug = () => {};
 
 function hex(data) {
   return new Buffer(data).toString('hex');
 }
 
-function sliceArguments(begin, end) {
-  return Array.prototype.slice.call(sliceArguments.caller.arguments,
-      begin, end);
-}
-
-function async(func) {
-  var args = sliceArguments(1);
-  process.nextTick(function () {
+function async(func, ...args) {
+  process.nextTick(() => {
     func.apply(null, args);
   });
 }
@@ -89,7 +83,7 @@ function logError(error) {
   }
 }
 
-function parseArgs(args) {
+function parseArgs(args, ...rest) {
   // This is another cool function. It parses command line arguments of two
   // kinds: '--long-name[=<value>]' and '-n [<value>]'
   // 
@@ -98,28 +92,28 @@ function parseArgs(args) {
   // You can pass in default values and a mapping of short names to long names
   // as the first and second arguments respectively.
 
-  var rest = sliceArguments(1);
+  const defaultOptions  = typeof rest[0] === 'object' && rest.shift()
+      || Object.create(null);
+  const shortcuts       = typeof rest[0] === 'object' && rest.shift()
+      || Object.create(null);
 
-  var defaultOptions  = typeof rest[0] === 'object' && rest.shift() || {};
-  var shortcuts       = typeof rest[0] === 'object' && rest.shift() || {};
+  let expect = null;
+  let stop = false;
 
-  var expect = null;
-  var stop = false;
-
-  var obj = Object.create(defaultOptions);
+  let obj = Object.create(defaultOptions);
 
   obj = Object.defineProperty(obj, '...', { value: [] });
   obj = Object.defineProperty(obj, '!?',  { value: [] });
 
   // Preprocessing.
-  args = args.reduce(function (newArgs, arg) {
+  args = args.reduce((newArgs, arg) => {
     if (!stop) {
       if (arg === '--') {
         stop = true;
 
       // Split '-xyz' into '-x', '-y', '-z'.
       } else if (arg.length > 2 && arg[0] === '-' && arg[1] !== '-') {
-        arg = arg.slice(1).split('').map(function (v) { return '-' + v });
+        arg = arg.slice(1).split('').map(v => '-' + v);
       }
     }
 
@@ -129,21 +123,22 @@ function parseArgs(args) {
 
   stop = false;
 
-  return args.reduce(function (obj, arg, index) {
-    var single = !stop && arg[0] === '-' && arg[1] !== '-';
+  return args.reduce((obj, arg, index) => {
+    const single = !stop && arg[0] === '-' && arg[1] !== '-';
 
     if (!(single && !(arg = shortcuts[arg]))) {
       if (!stop && arg.slice(0, 2) === '--') {
         if (arg.length > 2) {
-          var eq = arg.indexOf('=');
+          let eq = arg.indexOf('=');
 
           if (eq === -1) {
             eq = arg.length;
           }
 
-          var name = arg.slice(2, eq);
+          const name = arg.slice(2, eq);
 
-          if (!single && !defaultOptions.hasOwnProperty(name)) {
+          if (!single && !Object.prototype.hasOwnProperty.call(defaultOptions,
+                name)) {
             obj['!?'].push(arg.slice(0, eq));
 
             return obj;
@@ -203,7 +198,7 @@ function prompt(label, quiet, callback) {
     process.stdout.write(label);
   }
 
-  var rl = readline.createInterface({
+  const rl = readline.createInterface({
     input: process.stdin,
     // The quiet argument is for things like passwords. It turns off standard
     // output so nothing is displayed.
@@ -211,7 +206,7 @@ function prompt(label, quiet, callback) {
     terminal: true
   });
 
-  rl.on('line', function (line) {
+  rl.on('line', line => {
     rl.close();
 
     if (quiet) {
@@ -234,9 +229,9 @@ function home() {
 }
 
 function loadProfile() {
-  var profileDirectory = path.resolve(home(), '.mlck');
+  const profileDirectory = path.resolve(home(), '.mlck');
 
-  var data = null;
+  let data = null;
 
   try {
     data = fs.readFileSync(path.resolve(profileDirectory, 'profile.json'),
@@ -255,16 +250,16 @@ function loadProfile() {
 
 function loadDictionary() {
   try {
-    var data = fs.readFileSync(path.resolve(__dirname, 'dictionary'),
+    let data = fs.readFileSync(path.resolve(__dirname, 'dictionary'),
         { encoding: 'utf8' });
 
-    dictionary = data.split('\n').map(function (line) {
+    dictionary = data.split('\n').map(line =>
       // Trim spaces and strip out comments.
-      return line.replace(/^\s*|\s*$/g, '').replace(/^#.*/, '');
-    }).filter(function (line) {
+      line.replace(/^\s*|\s*$/g, '').replace(/^#.*/, '')
+    ).filter(line =>
       // Skip blank lines.
-      return line !== '';
-    });
+      line !== ''
+    );
   } catch (error) {
     dictionary = [];
   }
@@ -279,12 +274,12 @@ function randomPassphrase(entropy) {
     return null;
   }
 
-  var passphrase = '';
+  let passphrase = '';
 
   while (zxcvbn(passphrase).entropy < entropy) {
     // Pick a random word from the dictionary and add it to the passphrase.
-    var randomNumber = new Buffer(nacl.randomBytes(2)).readUInt16BE();
-    var index = Math.floor((randomNumber / 0x10000) * dictionary.length);
+    const randomNumber = new Buffer(nacl.randomBytes(2)).readUInt16BE();
+    const index = Math.floor((randomNumber / 0x10000) * dictionary.length);
 
     passphrase += (passphrase && ' ' || '') + dictionary[index];
   }
@@ -294,7 +289,7 @@ function randomPassphrase(entropy) {
 
 function printUsage() {
   try {
-    var help = fs.readFileSync(path.resolve(__dirname, 'help',
+    let help = fs.readFileSync(path.resolve(__dirname, 'help',
           'default.help'), 'utf8');
     process.stderr.write(help.split('\n\n')[0] + '\n\n');
   } catch (error) {
@@ -303,7 +298,7 @@ function printUsage() {
 
 function printHelp(topic) {
   try {
-    var help = fs.readFileSync(path.resolve(__dirname, 'help',
+    let help = fs.readFileSync(path.resolve(__dirname, 'help',
           (topic || 'default') + '.help'), 'utf8');
     process.stdout.write(help);
   } catch (error) {
@@ -312,28 +307,25 @@ function printHelp(topic) {
 }
 
 function getScryptKey(key, salt, callback) {
-  scrypt(key, salt, 17, 8, 32, 1000, function (keyBytes) {
-    return callback(nacl.util.decodeBase64(keyBytes));
-  },
-  'base64');
+  scrypt(key, salt, 17, 8, 32, 1000,
+      keyBytes => callback(nacl.util.decodeBase64(keyBytes)),
+      'base64');
 }
 
 function getKeyPair(key, salt, callback) {
-  var keyHash = new BLAKE2s(32);
+  const keyHash = new BLAKE2s(32);
   keyHash.update(nacl.util.decodeUTF8(key));
 
   getScryptKey(keyHash.digest(), nacl.util.decodeUTF8(salt),
-      function(keyBytes) {
-    callback(nacl.box.keyPair.fromSecretKey(keyBytes));
-  });
+      keyBytes => callback(nacl.box.keyPair.fromSecretKey(keyBytes)));
 }
 
 function miniLockId(publicKey) {
-  var id = new Uint8Array(33);
+  const id = new Uint8Array(33);
 
   id.set(publicKey);
 
-  var hash = new BLAKE2s(1);
+  const hash = new BLAKE2s(1);
   hash.update(publicKey);
 
   // The last byte is the checksum.
@@ -343,7 +335,7 @@ function miniLockId(publicKey) {
 }
 
 function readPassphrase(passphrase, minEntropy, callback) {
-  var defaultMinEntropy = 100;
+  const defaultMinEntropy = 100;
 
   if (typeof passphrase === 'function') {
     callback = passphrase;
@@ -355,13 +347,13 @@ function readPassphrase(passphrase, minEntropy, callback) {
   }
 
   if (typeof passphrase === 'string') {
-    async(function () {
-      callback(null, passphrase);
+    async(() => {
+      callback(null, passphrase)
     });
   } else {
     if (minEntropy) {
       // Display a dictionary-based random passphrase as a hint/suggestion.
-      var example = randomPassphrase(minEntropy);
+      const example = randomPassphrase(minEntropy);
       if (example) {
         console.log(example);
         console.log();
@@ -369,12 +361,12 @@ function readPassphrase(passphrase, minEntropy, callback) {
     }
 
     prompt('Passphrase (leave blank to quit): ', true,
-        function (error, passphrase) {
+        (error, passphrase) => {
       if (passphrase === '') {
         die();
       }
 
-      var entropy = zxcvbn(passphrase).entropy;
+      const entropy = zxcvbn(passphrase).entropy;
 
       if (entropy < minEntropy) {
         console.log();
@@ -415,21 +407,20 @@ function validateId(id) {
     return false;
   }
 
-  var bytes = Base58.decode(id);
+  const bytes = Base58.decode(id);
   if (bytes.length !== 33) {
     return false;
   }
 
-  var hash = new BLAKE2s(1);
+  const hash = new BLAKE2s(1);
   hash.update(bytes.slice(0, 32));
 
   return hash.digest()[0] === bytes[32];
 }
 
 function generateId(email, passphrase, callback) {
-  getKeyPair(passphrase, email, function (keyPair) {
-    callback(null, miniLockId(keyPair.publicKey), keyPair);
-  });
+  getKeyPair(passphrase, email,
+      keyPair => callback(null, miniLockId(keyPair.publicKey), keyPair));
 }
 
 function printId(id) {
@@ -443,7 +434,7 @@ function printId(id) {
 }
 
 function saveId(email, id, keyPair) {
-  var profileDirectory = path.resolve(home(), '.mlck');
+  const profileDirectory = path.resolve(home(), '.mlck');
 
   try {
     fs.mkdirSync(profileDirectory);
@@ -453,7 +444,7 @@ function saveId(email, id, keyPair) {
     }
   }
 
-  var profile = { version: '0.1' };
+  const profile = { version: '0.1' };
 
   if (keyPair) {
     // Store only the secret key. If it's compromised, you have to get a new
@@ -469,12 +460,12 @@ function saveId(email, id, keyPair) {
 }
 
 function readableArray(array) {
-  var fakeReadable = {};
+  const fakeReadable = {};
 
-  fakeReadable.on = function (event, listener) {
+  fakeReadable.on = (event, listener) => {
     if (event === 'readable') {
-      async(function () {
-        array.slice().forEach(function () {
+      async(() => {
+        array.slice().forEach(() => {
           listener();
         });
       });
@@ -483,17 +474,15 @@ function readableArray(array) {
     }
   };
 
-  fakeReadable.read = function () {
-    return array.shift();
-  };
+  fakeReadable.read = () => array.shift();
 
   return fakeReadable;
 }
 
 function asciiArmor(data, indent) {
-  var ascii = new Buffer(data).toString('base64');
+  let ascii = new Buffer(data).toString('base64');
 
-  var lines = [];
+  const lines = [];
 
   if ((indent = Math.max(0, indent | 0)) > 0) {
     // Indent first line.
@@ -512,8 +501,8 @@ function asciiArmor(data, indent) {
 }
 
 function makeHeader(ids, senderInfo, fileInfo) {
-  var ephemeral = nacl.box.keyPair();
-  var header = {
+  const ephemeral = nacl.box.keyPair();
+  const header = {
     version: 1,
     ephemeral: nacl.util.encodeBase64(ephemeral.publicKey),
     decryptInfo: {}
@@ -522,15 +511,15 @@ function makeHeader(ids, senderInfo, fileInfo) {
   debug("Ephemeral public key is " + hex(ephemeral.publicKey));
   debug("Ephemeral secret key is " + hex(ephemeral.secretKey));
 
-  ids.forEach(function (id, index) {
+  ids.forEach((id, index) => {
     debug("Adding recipient " + id);
 
-    var nonce = nacl.randomBytes(24);
-    var publicKey = keyFromId(id);
+    const nonce = nacl.randomBytes(24);
+    const publicKey = keyFromId(id);
 
     debug("Using nonce " + hex(nonce));
 
-    var decryptInfo = {
+    let decryptInfo = {
       senderID: senderInfo.id,
       recipientID: id,
       fileInfo: fileInfo
@@ -557,12 +546,12 @@ function makeHeader(ids, senderInfo, fileInfo) {
 }
 
 function extractDecryptInfo(header, secretKey) {
-  var decryptInfo = null;
+  let decryptInfo = null;
 
-  var ephemeral = nacl.util.decodeBase64(header.ephemeral);
+  const ephemeral = nacl.util.decodeBase64(header.ephemeral);
 
-  for (var i in header.decryptInfo) {
-    var nonce = nacl.util.decodeBase64(i);
+  for (let i in header.decryptInfo) {
+    const nonce = nacl.util.decodeBase64(i);
 
     debug("Trying nonce " + hex(nonce));
 
@@ -598,7 +587,7 @@ function extractDecryptInfo(header, secretKey) {
 
 function encryptChunk(chunk, encryptor, output, hash) {
   if (chunk && chunk.length > ENCRYPTION_CHUNK_SIZE) {
-    for (var i = 0; i < chunk.length; i += ENCRYPTION_CHUNK_SIZE) {
+    for (let i = 0; i < chunk.length; i += ENCRYPTION_CHUNK_SIZE) {
       encryptChunk(chunk.slice(i, i + ENCRYPTION_CHUNK_SIZE),
           encryptor, output, hash);
     }
@@ -621,14 +610,14 @@ function encryptChunk(chunk, encryptor, output, hash) {
 
 function decryptChunk(chunk, decryptor, output, hash) {
   while (true) {
-    var length = chunk.length >= 4 ? chunk.readUIntLE(0, 4, true) : 0;
+    const length = chunk.length >= 4 ? chunk.readUIntLE(0, 4, true) : 0;
 
     if (chunk.length < 4 + 16 + length) {
       break;
     }
 
-    var encrypted = new Uint8Array(chunk.slice(0, 4 + 16 + length));
-    var decrypted = decryptor.decryptChunk(encrypted, false);
+    const encrypted = new Uint8Array(chunk.slice(0, 4 + 16 + length));
+    const decrypted = decryptor.decryptChunk(encrypted, false);
 
     chunk = chunk.slice(4 + 16 + length);
 
@@ -654,7 +643,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
     includeSelf, anonymous, checkId, keyPair, callback) {
   debug("Begin file encryption");
 
-  var keyPairFunc = null;
+  let keyPairFunc = null;
 
   if (anonymous || !keyPair) {
     if (anonymous) {
@@ -666,22 +655,22 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
     debug("Generating key pair with email " + email
         + " and passphrase " + passphrase);
 
-    keyPairFunc = function (callback) {
+    keyPairFunc = callback => {
       getKeyPair(passphrase, email, callback);
     };
   } else {
-    keyPairFunc = function (callback) {
-      async(function () {
+    keyPairFunc = callback => {
+      async(() => {
         callback(keyPair);
       });
     };
   }
 
-  keyPairFunc(function (keyPair) {
+  keyPairFunc(keyPair => {
     debug("Our public key is " + hex(keyPair.publicKey));
     debug("Our secret key is " + hex(keyPair.secretKey));
 
-    var fromId = miniLockId(keyPair.publicKey);
+    const fromId = miniLockId(keyPair.publicKey);
 
     debug("Our miniLock ID is " + fromId);
 
@@ -690,29 +679,29 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
       return;
     }
 
-    var senderInfo = {
+    const senderInfo = {
       id: fromId,
       secretKey: keyPair.secretKey
     };
 
-    var fileKey   = nacl.randomBytes(32);
-    var fileNonce = nacl.randomBytes(16);
+    const fileKey   = nacl.randomBytes(32);
+    const fileNonce = nacl.randomBytes(16);
 
     debug("Using file key " + hex(fileKey));
     debug("Using file nonce " + hex(fileNonce));
 
-    var encryptor = nacl_.stream.createEncryptor(fileKey, fileNonce,
+    const encryptor = nacl_.stream.createEncryptor(fileKey, fileNonce,
         ENCRYPTION_CHUNK_SIZE);
-    var hash = new BLAKE2s(32);
+    const hash = new BLAKE2s(32);
 
     // Generate a random filename for writing encrypted chunks to instead of
     // keeping everything in memory.
-    var encryptedDataFile = temporaryFilename();
+    const encryptedDataFile = temporaryFilename();
 
     // This is where the encrypted chunks go.
-    var encrypted = [];
+    let encrypted = [];
 
-    var filenameBuffer = new Buffer(256).fill(0);
+    const filenameBuffer = new Buffer(256).fill(0);
 
     if (typeof file === 'string') {
       if (new Buffer(path.basename(file)).length > 256) {
@@ -731,19 +720,19 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
       console.error('Reading from stdin ...');
     }
 
-    var inputStream = typeof file === 'string' ? fs.createReadStream(file)
+    const inputStream = typeof file === 'string' ? fs.createReadStream(file)
       : process.stdin;
 
-    var inputByteCount = 0;
+    let inputByteCount = 0;
 
-    inputStream.on('error', function (error) {
-      fs.unlink(encryptedDataFile, function () {});
+    inputStream.on('error', error => {
+      fs.unlink(encryptedDataFile, () => {});
 
       callback(error, keyPair);
     });
 
-    inputStream.on('readable', function () {
-      var chunk = inputStream.read();
+    inputStream.on('readable', () => {
+      const chunk = inputStream.read();
       if (chunk !== null) {
         inputByteCount += chunk.length;
 
@@ -751,9 +740,9 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
         // writing to an array to writing to a file. This way we can do
         // extremely large files.
         if (inputByteCount > 4 * 1024 && Array.isArray(encrypted)) {
-          var stream = fs.createWriteStream(encryptedDataFile);
+          const stream = fs.createWriteStream(encryptedDataFile);
 
-          encrypted.forEach(function (chunk) {
+          encrypted.forEach(chunk => {
             stream.write(chunk);
           });
 
@@ -765,33 +754,33 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
       }
     });
 
-    inputStream.on('end', function () {
+    inputStream.on('end', () => {
       // Finish up with the encryption.
       encryptChunk(null, encryptor, encrypted, hash);
 
       encryptor.clean();
 
       // This is the 32-byte BLAKE2 hash of all the ciphertext.
-      var fileHash = hash.digest();
+      const fileHash = hash.digest();
 
       debug("File hash is " + hex(fileHash));
 
-      var fileInfo = {
+      const fileInfo = {
         fileKey: nacl.util.encodeBase64(fileKey),
         fileNonce: nacl.util.encodeBase64(fileNonce),
         fileHash: nacl.util.encodeBase64(fileHash)
       };
 
       // Pack the sender and file information into a header.
-      var header = makeHeader(includeSelf ? ids.concat(fromId) : ids,
+      const header = makeHeader(includeSelf ? ids.concat(fromId) : ids,
           senderInfo, fileInfo);
 
-      var headerLength = new Buffer(4);
+      const headerLength = new Buffer(4);
       headerLength.writeUInt32LE(header.length);
 
       debug("Header length is " + hex(headerLength));
 
-      var filename = typeof outputFile === 'string' ? outputFile
+      const filename = typeof outputFile === 'string' ? outputFile
         : typeof file === 'string' ? file + '.minilock'
         : null;
 
@@ -805,17 +794,17 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
         console.error('WARNING: Not writing output to terminal.');
       }
 
-      var outputStream = typeof filename === 'string'
+      const outputStream = typeof filename === 'string'
         ? fs.createWriteStream(filename) : armor || !process.stdout.isTTY
         ? process.stdout : null;
 
-      var outputByteCount = 0;
+      let outputByteCount = 0;
 
-      var buffer = new Buffer(0);
+      let buffer = new Buffer(0);
 
-      var asciiIndent = 0;
+      let asciiIndent = 0;
 
-      var outputHeader = Buffer.concat([
+      let outputHeader = Buffer.concat([
         // The file always begins with the magic bytes 0x6d696e694c6f636b.
         new Buffer('miniLock'), headerLength, new Buffer(header)
       ]);
@@ -846,7 +835,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
         encrypted.end = async;
       }
 
-      encrypted.end(function () {
+      encrypted.end(() => {
         if (Array.isArray(encrypted)) {
           // Wrap array into a stream-like interface.
           encrypted = readableArray(encrypted);
@@ -854,21 +843,21 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
           encrypted = fs.createReadStream(encryptedDataFile);
         }
 
-        encrypted.on('error', function (error) {
-          async(function () {
-            fs.unlink(encryptedDataFile, function () {});
+        encrypted.on('error', error => {
+          async(() => {
+            fs.unlink(encryptedDataFile, () => {});
 
             callback(error, keyPair);
           });
         });
 
-        encrypted.on('readable', function () {
-          var chunk = encrypted.read();
+        encrypted.on('readable', () => {
+          let chunk = encrypted.read();
           if (chunk !== null) {
             if (armor) {
               chunk = Buffer.concat([ buffer, chunk ]);
 
-              var index = chunk.length - chunk.length % 3;
+              const index = chunk.length - chunk.length % 3;
 
               buffer = chunk.slice(index);
               chunk = asciiArmor(chunk.slice(0, index), asciiIndent);
@@ -884,9 +873,9 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
           }
         });
 
-        encrypted.on('end', function () {
+        encrypted.on('end', () => {
           if (armor) {
-            var chunk = asciiArmor(buffer, asciiIndent)
+            const chunk = asciiArmor(buffer, asciiIndent)
               + '\n-----END MINILOCK FILE-----\n';
 
             if (outputStream) {
@@ -898,9 +887,9 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
 
           debug("File encryption complete");
 
-          async(function () {
+          async(() => {
             // Attempt to delete the temporary file, but ignore any error.
-            fs.unlink(encryptedDataFile, function () {});
+            fs.unlink(encryptedDataFile, () => {});
 
             callback(null, keyPair, outputByteCount, filename);
           });
@@ -914,28 +903,28 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
     keyPair, callback) {
   debug("Begin file decryption");
 
-  var keyPairFunc = null;
+  let keyPairFunc = null;
 
   if (!keyPair) {
     debug("Generating key pair with email " + email
         + " and passphrase " + passphrase);
 
-    keyPairFunc = function (callback) {
+    keyPairFunc = callback => {
       getKeyPair(passphrase, email, callback);
     };
   } else {
-    keyPairFunc = function (callback) {
-      async(function () {
+    keyPairFunc = callback => {
+      async(() => {
         callback(keyPair);
       });
     };
   }
 
-  keyPairFunc(function (keyPair) {
+  keyPairFunc(keyPair => {
     debug("Our public key is " + hex(keyPair.publicKey));
     debug("Our secret key is " + hex(keyPair.secretKey));
 
-    var toId = miniLockId(keyPair.publicKey);
+    const toId = miniLockId(keyPair.publicKey);
 
     debug("Our miniLock ID is " + toId);
 
@@ -944,31 +933,31 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
       return;
     }
 
-    var asciiBuffer = '';
+    let asciiBuffer = '';
 
-    var armorHeaders = null;
+    let armorHeaders = null;
 
-    var headerLength = NaN;
-    var header = null;
+    let headerLength = NaN;
+    let header = null;
 
-    var decryptInfo = null;
+    let decryptInfo = null;
 
-    var decryptor = null;
+    let decryptor = null;
 
-    var hash = new BLAKE2s(32);
+    const hash = new BLAKE2s(32);
 
     if (typeof file !== 'string' && process.stdin.isTTY) {
       console.error('Reading from stdin ...');
     }
 
-    var inputStream = typeof file === 'string' ? fs.createReadStream(file)
+    const inputStream = typeof file === 'string' ? fs.createReadStream(file)
       : process.stdin;
 
-    var buffer = new Buffer(0);
+    let buffer = new Buffer(0);
 
-    var error_ = null;
+    let error_ = null;
 
-    var outputFilename = typeof outputFile === 'string' ? outputFile
+    const outputFilename = typeof outputFile === 'string' ? outputFile
       : null;
 
     if (typeof outputFilename === 'string') {
@@ -977,19 +966,19 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
       debug("Writing to stdout");
     }
 
-    var originalFilename = null;
+    let originalFilename = null;
 
-    var outputStream = typeof outputFilename === 'string'
+    const outputStream = typeof outputFilename === 'string'
       ? fs.createWriteStream(outputFilename) : process.stdout;
 
-    var outputByteCount = 0;
+    let outputByteCount = 0;
 
-    inputStream.on('error', function (error) {
+    inputStream.on('error', error => {
       callback(error, keyPair);
     });
 
-    inputStream.on('readable', function () {
-      var chunk = inputStream.read();
+    inputStream.on('readable', () => {
+      let chunk = inputStream.read();
 
       if (error_ !== null) {
         return;
@@ -1001,7 +990,7 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
 
           chunk = new Buffer(0);
 
-          var index = -1;
+          let index = -1;
 
           if (!armorHeaders && asciiBuffer.slice(0, 30)
               === '-----BEGIN MINILOCK FILE-----\n'
@@ -1108,7 +1097,7 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
             }
           }
 
-          var array = [];
+          const array = [];
 
           // Decrypt as many chunks as possible.
           buffer = decryptChunk(buffer, decryptor, array, hash);
@@ -1119,7 +1108,7 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
           }
 
           // Write each decrypted chunk to the output stream.
-          array.forEach(function (chunk) {
+          array.forEach(chunk => {
             outputStream.write(chunk);
 
             outputByteCount += chunk.length;
@@ -1128,7 +1117,7 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
       }
     });
 
-    inputStream.on('end', function () {
+    inputStream.on('end', () => {
       if (error_ !== null) {
         return;
       }
@@ -1156,7 +1145,7 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
 }
 
 function handleIdCommand() {
-  var defaultOptions = {
+  const defaultOptions = {
     'email':           null,
     'passphrase':      null,
     'secret':          null,
@@ -1165,28 +1154,28 @@ function handleIdCommand() {
     'save-key':        false,
   };
 
-  var shortcuts = {
+  const shortcuts = {
     '-e': '--email=',
     '-P': '--passphrase='
   };
 
-  var options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
+  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
 
   if (options['!?'].length > 0) {
     die("Unknown option '" + options['!?'][0] + "'.");
   }
 
-  var email = options['...'][0] || options.email;
-  var passphrase = options.passphrase;
+  let email = options['...'][0] || options.email;
+  let passphrase = options.passphrase;
 
-  var secret = options.secret;
+  let secret = options.secret;
 
-  var anonymous = options.anonymous;
+  let anonymous = options.anonymous;
 
-  var save = options.save;
-  var saveKey = options['save-key'];
+  let save = options.save;
+  let saveKey = options['save-key'];
 
-  var keyPair = null;
+  let keyPair = null;
 
   if (anonymous) {
     // Generate a random passphrase.
@@ -1218,7 +1207,7 @@ function handleIdCommand() {
     return;
   }
 
-  readPassphrase(passphrase, function (error, passphrase) {
+  readPassphrase(passphrase, (error, passphrase) => {
     if (error) {
       logError(error);
       die();
@@ -1226,7 +1215,7 @@ function handleIdCommand() {
 
     debug("Using passphrase " + passphrase);
 
-    generateId(email, passphrase, function (error, id, keyPair) {
+    generateId(email, passphrase, (error, id, keyPair) => {
       if (error) {
         logError(error);
         die();
@@ -1244,7 +1233,7 @@ function handleIdCommand() {
 }
 
 function handleEncryptCommand() {
-  var defaultOptions = {
+  const defaultOptions = {
     'email':           null,
     'passphrase':      null,
     'secret':          null,
@@ -1255,7 +1244,7 @@ function handleEncryptCommand() {
     'anonymous':       false,
   };
 
-  var shortcuts = {
+  const shortcuts = {
     '-e': '--email=',
     '-P': '--passphrase=',
     '-f': '--file=',
@@ -1263,29 +1252,29 @@ function handleEncryptCommand() {
     '-a': '--armor',
   };
 
-  var options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
+  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
 
   if (options['!?'].length > 0) {
     die("Unknown option '" + options['!?'][0] + "'.");
   }
 
-  var ids = options['...'].slice();
+  let ids = options['...'].slice();
 
-  var email = options.email;
-  var passphrase = options.passphrase;
+  let email = options.email;
+  let passphrase = options.passphrase;
 
-  var secret = options.secret;
+  let secret = options.secret;
 
-  var file = options.file;
-  var outputFile = options['output-file'];
+  let file = options.file;
+  let outputFile = options['output-file'];
 
-  var armor = options.armor;
+  let armor = options.armor;
 
-  var includeSelf = options['self'];
+  let includeSelf = options['self'];
 
-  var anonymous = options.anonymous;
+  let anonymous = options.anonymous;
 
-  ids.forEach(function (id) {
+  ids.forEach(id => {
     if (!validateId(id)) {
       die(id + " doesn't look like a valid miniLock ID.");
     }
@@ -1297,7 +1286,7 @@ function handleEncryptCommand() {
     secret = profile && profile.secret || null;
   }
 
-  var keyPair = !anonymous && typeof email !== 'string'
+  let keyPair = !anonymous && typeof email !== 'string'
     && secret && keyPairFromSecret(secret);
 
   if (!keyPair) {
@@ -1314,11 +1303,11 @@ function handleEncryptCommand() {
     }
   }
 
-  var checkId = !anonymous && !keyPair && profile && email === profile.email
+  const checkId = !anonymous && !keyPair && profile && email === profile.email
     && profile.id;
 
   readPassphrase(anonymous || keyPair ? '' : passphrase, 0,
-      function (error, passphrase) {
+      (error, passphrase) => {
     if (error) {
       logError(error);
       die();
@@ -1330,7 +1319,7 @@ function handleEncryptCommand() {
 
     encryptFile(ids, email, passphrase, file, outputFile, armor, includeSelf,
         anonymous, checkId, keyPair,
-        function (error, keyPair, length, filename) {
+        (error, keyPair, length, filename) => {
       if (error) {
         if (error === ERR_ID_CHECK_FAILED) {
           console.error('Incorrect passphrase for ' + email);
@@ -1355,7 +1344,7 @@ function handleEncryptCommand() {
 }
 
 function handleDecryptCommand() {
-  var defaultOptions = {
+  const defaultOptions = {
     'email':           null,
     'passphrase':      null,
     'secret':          null,
@@ -1364,7 +1353,7 @@ function handleDecryptCommand() {
     'armor':           false,
   };
 
-  var shortcuts = {
+  const shortcuts = {
     '-e': '--email=',
     '-P': '--passphrase=',
     '-f': '--file=',
@@ -1372,21 +1361,21 @@ function handleDecryptCommand() {
     '-a': '--armor',
   };
 
-  var options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
+  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
 
   if (options['!?'].length > 0) {
     die("Unknown option '" + options['!?'][0] + "'.");
   }
 
-  var email = options.email;
-  var passphrase = options.passphrase;
+  let email = options.email;
+  let passphrase = options.passphrase;
 
-  var secret = options.secret;
+  let secret = options.secret;
 
-  var file = options.file;
-  var outputFile = options['output-file'];
+  let file = options.file;
+  let outputFile = options['output-file'];
 
-  var armor = options.armor;
+  let armor = options.armor;
 
   if (typeof secret !== 'string') {
     loadProfile();
@@ -1394,7 +1383,7 @@ function handleDecryptCommand() {
     secret = profile && profile.secret || null;
   }
 
-  var keyPair = typeof email !== 'string'
+  let keyPair = typeof email !== 'string'
     && secret && keyPairFromSecret(secret);
 
   if (!keyPair) {
@@ -1411,9 +1400,9 @@ function handleDecryptCommand() {
     }
   }
 
-  var checkId = !keyPair && profile && email === profile.email && profile.id;
+  const checkId = !keyPair && profile && email === profile.email && profile.id;
 
-  readPassphrase(keyPair ? '' : passphrase, 0, function (error, passphrase) {
+  readPassphrase(keyPair ? '' : passphrase, 0, (error, passphrase) => {
     if (error) {
       logError(error);
       die();
@@ -1422,8 +1411,7 @@ function handleDecryptCommand() {
     debug("Using passphrase " + passphrase);
 
     decryptFile(email, passphrase, file, outputFile, armor, checkId, keyPair,
-        function (error, keyPair, length, filename, senderId,
-          originalFilename) {
+        (error, keyPair, length, filename, senderId, originalFilename) => {
       if (error) {
         if (error === ERR_ID_CHECK_FAILED) {
           console.error('Incorrect passphrase for ' + email);
@@ -1477,12 +1465,12 @@ function run() {
   if (process.argv[2] === '--debug') {
     process.argv.splice(2, 1);
 
-    debug = function () {
+    debug = () => {
       console.error.apply(console, arguments);
     }
   }
 
-  var command = process.argv[2];
+  const command = process.argv[2];
 
   switch (command) {
   case 'id':
