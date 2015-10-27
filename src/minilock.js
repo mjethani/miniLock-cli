@@ -1,310 +1,27 @@
-/*  ----------------------------------------------------------------------------
- *  miniLock-cli v0.2.9
- *  
- *  A command line version of miniLock
- *  
- *  Author:  Manish Jethani (manish.jethani@gmail.com)
- *  Date:    August 6, 2015
- *  
- *  See 'mlck --help'
- *  
- *  PGP: 57F8 9653 7461 1F9C EEF9 578B FBDC 955C E6B7 4303
- *  
- *  Bitcoin: 1NxChtv1R6q6STF9rq1BZsZ4jUKDh5MsQg
- *  
- *  http://manishjethani.com/
- *  
- *  Copyright (c) 2015 Manish Jethani
- *  
- *  Permission to use, copy, modify, and/or distribute this software for any
- *  purpose with or without fee is hereby granted, provided that the above
- *  copyright notice and this permission notice appear in all copies.
- *  
- *  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- *  WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- *  MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- *  SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- *  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- *  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
- *  IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *  ------------------------------------------------------------------------- */
-
 import fs       from 'fs';
-import os       from 'os';
 import path     from 'path';
-import readline from 'readline';
-import stream   from 'stream';
 
 import BLAKE2s  from 'blake2s-js';
 import Base58   from 'bs58';
 import nacl     from 'tweetnacl';
 import nacl_    from 'nacl-stream';
 import scrypt   from 'scrypt-async';
-import zxcvbn   from 'zxcvbn';
 
-const _version = require('./package.json').version;
+import { async, hex, temporaryFilename } from './util';
 
-const ERR_ID_CHECK_FAILED = 'ID check failed';
-const ERR_PARSE_ERROR = 'Parse error';
-const ERR_UNSUPPORTED_VERSION = 'Unsupported version';
-const ERR_NOT_A_RECIPIENT = 'Not a recipient';
-const ERR_MESSAGE_INTEGRITY_CHECK_FAILED = 'Message integrity check failed';
+import debug from './debug';
+
+import _version from './version';
+
+export const ERR_ID_CHECK_FAILED = 'ID check failed';
+export const ERR_PARSE_ERROR = 'Parse error';
+export const ERR_UNSUPPORTED_VERSION = 'Unsupported version';
+export const ERR_NOT_A_RECIPIENT = 'Not a recipient';
+export const ERR_MESSAGE_INTEGRITY_CHECK_FAILED
+  = 'Message integrity check failed';
 
 const ENCRYPTION_CHUNK_SIZE = 256;
 const ARMOR_WIDTH = 64;
-
-let profile = null;
-
-let dictionary = null;
-
-let debug = () => {};
-
-function hex(data) {
-  return new Buffer(data).toString('hex');
-}
-
-function async(func, ...args) {
-  process.nextTick(() => {
-    func.apply(null, args);
-  });
-}
-
-function die() {
-  if (arguments.length > 0) {
-    console.error.apply(console, arguments);
-  }
-
-  process.exit(1);
-}
-
-function logError(error) {
-  if (error) {
-    console.error(error.toString());
-  }
-}
-
-function parseArgs(args, ...rest) {
-  // This is another cool function. It parses command line arguments of two
-  // kinds: '--long-name[=<value>]' and '-n [<value>]'
-  // 
-  // If the value is omitted, it's assumed to be a boolean true.
-  // 
-  // You can pass in default values and a mapping of short names to long names
-  // as the first and second arguments respectively.
-
-  const defaultOptions  = typeof rest[0] === 'object' && rest.shift()
-      || Object.create(null);
-  const shortcuts       = typeof rest[0] === 'object' && rest.shift()
-      || Object.create(null);
-
-  let expect = null;
-  let stop = false;
-
-  let obj = Object.create(defaultOptions);
-
-  obj = Object.defineProperty(obj, '...', { value: [] });
-  obj = Object.defineProperty(obj, '!?',  { value: [] });
-
-  // Preprocessing.
-  args = args.reduce((newArgs, arg) => {
-    if (!stop) {
-      if (arg === '--') {
-        stop = true;
-
-      // Split '-xyz' into '-x', '-y', '-z'.
-      } else if (arg.length > 2 && arg[0] === '-' && arg[1] !== '-') {
-        arg = arg.slice(1).split('').map(v => '-' + v);
-      }
-    }
-
-    return newArgs.concat(arg);
-  },
-  []);
-
-  stop = false;
-
-  return args.reduce((obj, arg, index) => {
-    const single = !stop && arg[0] === '-' && arg[1] !== '-';
-
-    if (!(single && !(arg = shortcuts[arg]))) {
-      if (!stop && arg.slice(0, 2) === '--') {
-        if (arg.length > 2) {
-          let eq = arg.indexOf('=');
-
-          if (eq === -1) {
-            eq = arg.length;
-          }
-
-          const name = arg.slice(2, eq);
-
-          if (!single && !Object.prototype.hasOwnProperty.call(defaultOptions,
-                name)) {
-            obj['!?'].push(arg.slice(0, eq));
-
-            return obj;
-          }
-
-          if (single && eq === arg.length - 1) {
-            obj[expect = name] = '';
-
-            return obj;
-          }
-
-          obj[name] = typeof defaultOptions[name] === 'boolean'
-              && eq === arg.length
-              || arg.slice(eq + 1);
-
-        } else {
-          stop = true;
-        }
-      } else if (expect) {
-        obj[expect] = arg;
-
-      } else if (rest.length > 0) {
-        obj[rest.shift()] = arg;
-
-      } else {
-        obj['...'].push(arg);
-      }
-
-    } else if (single) {
-      obj['!?'].push(args[index]);
-    }
-
-    expect = null;
-
-    return obj;
-  },
-  obj);
-}
-
-function prompt(label, quiet, callback) {
-  if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    throw new Error('No TTY.');
-  }
-
-  if (arguments.length > 0) {
-    callback = arguments[arguments.length - 1];
-    if (typeof callback !== 'function') {
-      callback = null;
-    }
-  }
-
-  if (typeof quiet !== 'boolean') {
-    quiet = false;
-  }
-
-  if (typeof label === 'string') {
-    process.stdout.write(label);
-  }
-
-  const rl = readline.createInterface({
-    input: process.stdin,
-    // The quiet argument is for things like passwords. It turns off standard
-    // output so nothing is displayed.
-    output: !quiet && process.stdout || null,
-    terminal: true
-  });
-
-  rl.on('line', line => {
-    rl.close();
-
-    if (quiet) {
-      process.stdout.write(os.EOL);
-    }
-
-    if (callback) {
-      callback(null, line);
-    }
-  });
-}
-
-function temporaryFilename() {
-  return path.resolve(os.tmpdir(),
-      '.mlck-' + hex(nacl.randomBytes(32)) + '.tmp');
-}
-
-function home() {
-  return process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
-}
-
-function loadProfile() {
-  const profileDirectory = path.resolve(home(), '.mlck');
-
-  let data = null;
-
-  try {
-    data = fs.readFileSync(path.resolve(profileDirectory, 'profile.json'),
-        { encoding: 'utf8' });
-  } catch (error) {
-  }
-
-  if (data) {
-    try {
-      profile = JSON.parse(data);
-    } catch (error) {
-      console.error('WARNING: Profile data is corrupt.');
-    }
-  }
-}
-
-function loadDictionary() {
-  try {
-    let data = fs.readFileSync(path.resolve(__dirname, 'dictionary'),
-        { encoding: 'utf8' });
-
-    dictionary = data.split('\n').map(line =>
-      // Trim spaces and strip out comments.
-      line.replace(/^\s*|\s*$/g, '').replace(/^#.*/, '')
-    ).filter(line =>
-      // Skip blank lines.
-      line !== ''
-    );
-  } catch (error) {
-    dictionary = [];
-  }
-}
-
-function randomPassphrase(entropy) {
-  if (!dictionary) {
-    loadDictionary();
-  }
-
-  if (dictionary.length === 0) {
-    return null;
-  }
-
-  let passphrase = '';
-
-  while (zxcvbn(passphrase).entropy < entropy) {
-    // Pick a random word from the dictionary and add it to the passphrase.
-    const randomNumber = new Buffer(nacl.randomBytes(2)).readUInt16BE();
-    const index = Math.floor((randomNumber / 0x10000) * dictionary.length);
-
-    passphrase += (passphrase && ' ' || '') + dictionary[index];
-  }
-
-  return passphrase;
-}
-
-function printUsage() {
-  try {
-    let help = fs.readFileSync(path.resolve(__dirname, 'help',
-          'default.help'), 'utf8');
-    process.stderr.write(help.split('\n\n')[0] + '\n\n');
-  } catch (error) {
-  }
-}
-
-function printHelp(topic) {
-  try {
-    let help = fs.readFileSync(path.resolve(__dirname, 'help',
-          (topic || 'default') + '.help'), 'utf8');
-    process.stdout.write(help);
-  } catch (error) {
-    printUsage();
-  }
-}
 
 function getScryptKey(key, salt, callback) {
   scrypt(key, salt, 17, 8, 32, 1000,
@@ -312,7 +29,7 @@ function getScryptKey(key, salt, callback) {
       'base64');
 }
 
-function getKeyPair(key, salt, callback) {
+export function getKeyPair(key, salt, callback) {
   const keyHash = new BLAKE2s(32);
   keyHash.update(nacl.util.decodeUTF8(key));
 
@@ -320,7 +37,7 @@ function getKeyPair(key, salt, callback) {
       keyBytes => callback(nacl.box.keyPair.fromSecretKey(keyBytes)));
 }
 
-function miniLockId(publicKey) {
+export function miniLockId(publicKey) {
   const id = new Uint8Array(33);
 
   id.set(publicKey);
@@ -334,64 +51,15 @@ function miniLockId(publicKey) {
   return Base58.encode(id);
 }
 
-function readPassphrase(passphrase, minEntropy, callback) {
-  const defaultMinEntropy = 100;
-
-  if (typeof passphrase === 'function') {
-    callback = passphrase;
-    minEntropy = defaultMinEntropy;
-    passphrase = null;
-  } else if (typeof minEntropy === 'function') {
-    callback = minEntropy;
-    minEntropy = defaultMinEntropy;
-  }
-
-  if (typeof passphrase === 'string') {
-    async(() => {
-      callback(null, passphrase)
-    });
-  } else {
-    if (minEntropy) {
-      // Display a dictionary-based random passphrase as a hint/suggestion.
-      const example = randomPassphrase(minEntropy);
-      if (example) {
-        console.log(example);
-        console.log();
-      }
-    }
-
-    prompt('Passphrase (leave blank to quit): ', true,
-        (error, passphrase) => {
-      if (passphrase === '') {
-        die();
-      }
-
-      const entropy = zxcvbn(passphrase).entropy;
-
-      if (entropy < minEntropy) {
-        console.log();
-        console.log('Entropy: ' + entropy + '/' + minEntropy);
-        console.log();
-        console.log("Let's try once more ...");
-        console.log();
-
-        readPassphrase(null, callback);
-      } else {
-        callback(error, passphrase);
-      }
-    });
-  }
-}
-
-function keyFromId(id) {
+export function keyFromId(id) {
   return new Uint8Array(Base58.decode(id).slice(0, 32));
 }
 
-function keyPairFromSecret(secret) {
+export function keyPairFromSecret(secret) {
   return nacl.box.keyPair.fromSecretKey(keyFromId(secret));
 }
 
-function validateKey(key) {
+export function validateKey(key) {
   if (!key || !(key.length >= 40 && key.length <= 50)
       || !/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/
       .test(key)) {
@@ -401,7 +69,7 @@ function validateKey(key) {
   return nacl.util.decodeBase64(key).length === 32;
 }
 
-function validateId(id) {
+export function validateId(id) {
   if (!/^[1-9ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{40,55}$/
       .test(id)) {
     return false;
@@ -416,47 +84,6 @@ function validateId(id) {
   hash.update(bytes.slice(0, 32));
 
   return hash.digest()[0] === bytes[32];
-}
-
-function generateId(email, passphrase, callback) {
-  getKeyPair(passphrase, email,
-      keyPair => callback(null, miniLockId(keyPair.publicKey), keyPair));
-}
-
-function printId(id) {
-  if (process.stdout.isTTY) {
-    console.log();
-    console.log('Your miniLock ID: ' + id + '.');
-    console.log();
-  } else {
-    console.log(id);
-  }
-}
-
-function saveId(email, id, keyPair) {
-  const profileDirectory = path.resolve(home(), '.mlck');
-
-  try {
-    fs.mkdirSync(profileDirectory);
-  } catch (error) {
-    if (error.code !== 'EEXIST') {
-      throw error;
-    }
-  }
-
-  const profile = { version: '0.1' };
-
-  if (keyPair) {
-    // Store only the secret key. If it's compromised, you have to get a new
-    // one. No other information is leaked.
-    profile.secret = miniLockId(keyPair.secretKey);
-  } else {
-    profile.email = email;
-    profile.id = id;
-  }
-
-  fs.writeFileSync(path.resolve(profileDirectory, 'profile.json'),
-      JSON.stringify(profile));
 }
 
 function readableArray(array) {
@@ -639,7 +266,7 @@ function decryptChunk(chunk, decryptor, output, hash) {
   return chunk;
 }
 
-function encryptFile(ids, email, passphrase, file, outputFile, armor,
+export function encryptFile(ids, email, passphrase, file, outputFile, armor,
     includeSelf, anonymous, checkId, keyPair, callback) {
   debug("Begin file encryption");
 
@@ -899,7 +526,7 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
   });
 }
 
-function decryptFile(email, passphrase, file, outputFile, armor, checkId,
+export function decryptFile(email, passphrase, file, outputFile, armor, checkId,
     keyPair, callback) {
   debug("Begin file decryption");
 
@@ -1143,374 +770,5 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
     });
   });
 }
-
-function handleIdCommand() {
-  const defaultOptions = {
-    'email':           null,
-    'passphrase':      null,
-    'secret':          null,
-    'anonymous':       false,
-    'save':            false,
-    'save-key':        false,
-  };
-
-  const shortcuts = {
-    '-e': '--email=',
-    '-P': '--passphrase='
-  };
-
-  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
-
-  if (options['!?'].length > 0) {
-    die("Unknown option '" + options['!?'][0] + "'.");
-  }
-
-  let email = options['...'][0] || options.email;
-  let passphrase = options.passphrase;
-
-  let secret = options.secret;
-
-  let anonymous = options.anonymous;
-
-  let save = options.save;
-  let saveKey = options['save-key'];
-
-  let keyPair = null;
-
-  if (anonymous) {
-    // Generate a random passphrase.
-    email = 'Anonymous';
-    passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
-  }
-
-  if (typeof email !== 'string' || (!anonymous && typeof secret === 'string')) {
-    if (typeof secret !== 'string') {
-      loadProfile();
-
-      secret = profile && profile.secret || null;
-    }
-
-    if (profile && profile.id) {
-      printId(profile.id);
-    } else if (secret) {
-      keyPair = keyPairFromSecret(secret);
-
-      if (saveKey) {
-        saveId(null, null, keyPair);
-      }
-
-      printId(miniLockId(keyPair.publicKey));
-    } else {
-      console.error('No profile data available.');
-    }
-
-    return;
-  }
-
-  readPassphrase(passphrase, (error, passphrase) => {
-    if (error) {
-      logError(error);
-      die();
-    }
-
-    debug("Using passphrase " + passphrase);
-
-    generateId(email, passphrase, (error, id, keyPair) => {
-      if (error) {
-        logError(error);
-        die();
-      }
-
-      if (saveKey) {
-        saveId(email, id, keyPair);
-      } else if (save) {
-        saveId(email, id);
-      }
-
-      printId(id);
-    });
-  });
-}
-
-function handleEncryptCommand() {
-  const defaultOptions = {
-    'email':           null,
-    'passphrase':      null,
-    'secret':          null,
-    'file':            null,
-    'output-file':     null,
-    'armor':           false,
-    'self':            false,
-    'anonymous':       false,
-  };
-
-  const shortcuts = {
-    '-e': '--email=',
-    '-P': '--passphrase=',
-    '-f': '--file=',
-    '-o': '--output-file=',
-    '-a': '--armor',
-  };
-
-  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
-
-  if (options['!?'].length > 0) {
-    die("Unknown option '" + options['!?'][0] + "'.");
-  }
-
-  let ids = options['...'].slice();
-
-  let email = options.email;
-  let passphrase = options.passphrase;
-
-  let secret = options.secret;
-
-  let file = options.file;
-  let outputFile = options['output-file'];
-
-  let armor = options.armor;
-
-  let includeSelf = options['self'];
-
-  let anonymous = options.anonymous;
-
-  ids.forEach(id => {
-    if (!validateId(id)) {
-      die(id + " doesn't look like a valid miniLock ID.");
-    }
-  });
-
-  if (typeof secret !== 'string') {
-    loadProfile();
-
-    secret = profile && profile.secret || null;
-  }
-
-  let keyPair = !anonymous && typeof email !== 'string'
-    && secret && keyPairFromSecret(secret);
-
-  if (!keyPair) {
-    if (typeof email !== 'string' && profile) {
-      email = profile.email;
-    }
-
-    if (!anonymous && typeof email !== 'string') {
-      die('Email required.');
-    }
-
-    if (!anonymous && typeof passphrase !== 'string' && !process.stdin.isTTY) {
-      die('No passphrase given; no terminal available.');
-    }
-  }
-
-  const checkId = !anonymous && !keyPair && profile && email === profile.email
-    && profile.id;
-
-  readPassphrase(anonymous || keyPair ? '' : passphrase, 0,
-      (error, passphrase) => {
-    if (error) {
-      logError(error);
-      die();
-    }
-
-    if (!anonymous && !keyPair) {
-      debug("Using passphrase " + passphrase);
-    }
-
-    encryptFile(ids, email, passphrase, file, outputFile, armor, includeSelf,
-        anonymous, checkId, keyPair,
-        (error, keyPair, length, filename) => {
-      if (error) {
-        if (error === ERR_ID_CHECK_FAILED) {
-          console.error('Incorrect passphrase for ' + email);
-        } else {
-          logError(error);
-        }
-        die();
-      }
-
-      if (process.stdout.isTTY) {
-        console.log();
-        console.log('Encrypted from ' + miniLockId(keyPair.publicKey) + '.');
-        console.log();
-
-        if (typeof filename === 'string') {
-          console.log('Wrote ' + length + ' bytes to ' + filename);
-          console.log();
-        }
-      }
-    });
-  });
-}
-
-function handleDecryptCommand() {
-  const defaultOptions = {
-    'email':           null,
-    'passphrase':      null,
-    'secret':          null,
-    'file':            null,
-    'output-file':     null,
-    'armor':           false,
-  };
-
-  const shortcuts = {
-    '-e': '--email=',
-    '-P': '--passphrase=',
-    '-f': '--file=',
-    '-o': '--output-file=',
-    '-a': '--armor',
-  };
-
-  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
-
-  if (options['!?'].length > 0) {
-    die("Unknown option '" + options['!?'][0] + "'.");
-  }
-
-  let email = options.email;
-  let passphrase = options.passphrase;
-
-  let secret = options.secret;
-
-  let file = options.file;
-  let outputFile = options['output-file'];
-
-  let armor = options.armor;
-
-  if (typeof secret !== 'string') {
-    loadProfile();
-
-    secret = profile && profile.secret || null;
-  }
-
-  let keyPair = typeof email !== 'string'
-    && secret && keyPairFromSecret(secret);
-
-  if (!keyPair) {
-    if (typeof email !== 'string' && profile) {
-      email = profile.email;
-    }
-
-    if (typeof email !== 'string') {
-      die('Email required.');
-    }
-
-    if (typeof passphrase !== 'string' && !process.stdin.isTTY) {
-      die('No passphrase given; no terminal available.');
-    }
-  }
-
-  const checkId = !keyPair && profile && email === profile.email && profile.id;
-
-  readPassphrase(keyPair ? '' : passphrase, 0, (error, passphrase) => {
-    if (error) {
-      logError(error);
-      die();
-    }
-
-    debug("Using passphrase " + passphrase);
-
-    decryptFile(email, passphrase, file, outputFile, armor, checkId, keyPair,
-        (error, keyPair, length, filename, senderId, originalFilename) => {
-      if (error) {
-        if (error === ERR_ID_CHECK_FAILED) {
-          console.error('Incorrect passphrase for ' + email);
-        } else if (error === ERR_PARSE_ERROR) {
-          console.error('The file appears corrupt.');
-        } else if (error === ERR_UNSUPPORTED_VERSION) {
-          console.error('This miniLock version is not supported.');
-        } else if (error === ERR_NOT_A_RECIPIENT) {
-          console.error('The message is not intended for '
-              + miniLockId(keyPair.publicKey) + '.');
-        } else if (error === ERR_MESSAGE_INTEGRITY_CHECK_FAILED) {
-          console.error('The message is corrupt.');
-        } else {
-          logError(error);
-        }
-        die();
-      }
-
-      if (process.stdout.isTTY) {
-        console.log();
-        console.log('Message from ' + senderId + '.');
-        console.log();
-
-        if (originalFilename) {
-          console.log('Original filename: ' + originalFilename);
-          console.log();
-        }
-
-        if (typeof filename === 'string') {
-          console.log('Wrote ' + length + ' bytes to ' + filename);
-          console.log();
-        }
-      }
-    });
-  });
-}
-
-function handleHelpCommand() {
-  printHelp(process.argv[2] === 'help' && process.argv[3]);
-}
-
-function handleVersionCommand() {
-  console.log('miniLock-cli v' + _version);
-}
-
-function handleLicenseCommand() {
-  process.stdout.write(fs.readFileSync(path.resolve(__dirname, 'LICENSE')));
-}
-
-function run() {
-  if (process.argv[2] === '--debug') {
-    process.argv.splice(2, 1);
-
-    debug = () => {
-      console.error.apply(console, arguments);
-    }
-  }
-
-  const command = process.argv[2];
-
-  switch (command) {
-  case 'id':
-    handleIdCommand();
-    break;
-  case 'encrypt':
-    handleEncryptCommand();
-    break;
-  case 'decrypt':
-    handleDecryptCommand();
-    break;
-  case 'help':
-  case '--help':
-  case '-h':
-  case '-?':
-    handleHelpCommand();
-    break;
-  case 'version':
-  case '--version':
-  case '-V':
-    handleVersionCommand();
-    break;
-  case 'license':
-  case '--license':
-    handleLicenseCommand();
-    break;
-  default:
-    printUsage();
-    die();
-  }
-}
-
-function main() {
-  run();
-}
-
-if (require.main === module) {
-  main();
-}
-
-exports.run = run;
 
 // vim: et ts=2 sw=2

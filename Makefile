@@ -4,7 +4,7 @@ build watch: babel_flags += -s
 watch: babel_flags += -w
 
 build watch:
-	babel $(babel_flags) -o build.js main.js
+	babel $(babel_flags) -d build src
 
 $(VERSION):
 	bash version.sh $(VERSION)
@@ -12,7 +12,7 @@ $(VERSION):
 version: $(VERSION)
 
 .npmignore: .gitignore
-	sort -ru .gitignore | grep -v '^build.js$$' > .npmignore
+	sort -ru .gitignore | grep -v '^build$$' > .npmignore
 	echo '.gitignore .npmignore Makefile *.sh' | tr ' ' '\n' >> .npmignore
 
 .kbignore: .npmignore
