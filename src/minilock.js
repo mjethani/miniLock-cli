@@ -135,16 +135,16 @@ function makeHeader(ids, senderInfo, fileInfo) {
     decryptInfo: {}
   };
 
-  debug("Ephemeral public key is " + hex(ephemeral.publicKey));
-  debug("Ephemeral secret key is " + hex(ephemeral.secretKey));
+  debug(`Ephemeral public key is ${hex(ephemeral.publicKey)}`);
+  debug(`Ephemeral secret key is ${hex(ephemeral.secretKey)}`);
 
   ids.forEach((id, index) => {
-    debug("Adding recipient " + id);
+    debug(`Adding recipient ${id}`);
 
     const nonce = nacl.randomBytes(24);
     const publicKey = keyFromId(id);
 
-    debug("Using nonce " + hex(nonce));
+    debug(`Using nonce ${hex(nonce)}`);
 
     let decryptInfo = {
       senderID: senderInfo.id,
@@ -180,7 +180,7 @@ function extractDecryptInfo(header, secretKey) {
   for (let i in header.decryptInfo) {
     const nonce = nacl.util.decodeBase64(i);
 
-    debug("Trying nonce " + hex(nonce));
+    debug(`Trying nonce ${hex(nonce)}`);
 
     decryptInfo = nacl.util.decodeBase64(header.decryptInfo[i]);
     decryptInfo = nacl.box.open(decryptInfo, nonce, ephemeral, secretKey);
@@ -188,8 +188,8 @@ function extractDecryptInfo(header, secretKey) {
     if (decryptInfo) {
       decryptInfo = JSON.parse(nacl.util.encodeUTF8(decryptInfo));
 
-      debug("Recipient ID is " + decryptInfo.recipientID);
-      debug("Sender ID is " + decryptInfo.senderID);
+      debug(`Recipient ID is ${decryptInfo.recipientID}`);
+      debug(`Sender ID is ${decryptInfo.senderID}`);
 
       decryptInfo.fileInfo = nacl.util.decodeBase64(decryptInfo.fileInfo);
       decryptInfo.fileInfo = nacl.box.open(decryptInfo.fileInfo, nonce,
@@ -199,12 +199,12 @@ function extractDecryptInfo(header, secretKey) {
           nacl.util.encodeUTF8(decryptInfo.fileInfo)
           );
 
-      debug("File key is " + hex(nacl.util.decodeBase64(
-              decryptInfo.fileInfo.fileKey)));
-      debug("File nonce is " + hex(nacl.util.decodeBase64(
-              decryptInfo.fileInfo.fileNonce)));
-      debug("File hash is " + hex(nacl.util.decodeBase64(
-              decryptInfo.fileInfo.fileHash)));
+      debug(`File key is`
+          + ` ${hex(nacl.util.decodeBase64(decryptInfo.fileInfo.fileKey))}`);
+      debug(`File nonce is`
+          + ` ${hex(nacl.util.decodeBase64(decryptInfo.fileInfo.fileNonce))}`);
+      debug(`File hash is`
+          + ` ${hex(nacl.util.decodeBase64(decryptInfo.fileInfo.fileHash))}`);
       break;
     }
   }
@@ -221,7 +221,7 @@ function encryptChunk(chunk, encryptor, output, hash) {
   } else {
     chunk = encryptor.encryptChunk(new Uint8Array(chunk || []), !chunk);
 
-    debug("Encrypted chunk " + hex(chunk));
+    debug(`Encrypted chunk ${hex(chunk)}`);
 
     if (Array.isArray(output)) {
       output.push(new Buffer(chunk));
@@ -249,7 +249,7 @@ function decryptChunk(chunk, decryptor, output, hash) {
     chunk = chunk.slice(4 + 16 + length);
 
     if (decrypted) {
-      debug("Decrypted chunk " + hex(decrypted));
+      debug(`Decrypted chunk ${hex(decrypted)}`);
 
       if (Array.isArray(output)) {
         output.push(new Buffer(decrypted));
@@ -270,7 +270,7 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
     { filename, armor, includeSelf }={}, callback) {
   const fromId = miniLockId(keyPair.publicKey);
 
-  debug("Our miniLock ID is " + fromId);
+  debug(`Our miniLock ID is ${fromId}`);
 
   const senderInfo = {
     id: fromId,
@@ -280,8 +280,8 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
   const fileKey   = nacl.randomBytes(32);
   const fileNonce = nacl.randomBytes(16);
 
-  debug("Using file key " + hex(fileKey));
-  debug("Using file nonce " + hex(fileNonce));
+  debug(`Using file key ${hex(fileKey)}`);
+  debug(`Using file nonce ${hex(fileNonce)}`);
 
   const encryptor = nacl_.stream.createEncryptor(fileKey, fileNonce,
       ENCRYPTION_CHUNK_SIZE);
@@ -349,7 +349,7 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
     // This is the 32-byte BLAKE2 hash of all the ciphertext.
     const fileHash = hash.digest();
 
-    debug("File hash is " + hex(fileHash));
+    debug(`File hash is ${hex(fileHash)}`);
 
     const fileInfo = {
       fileKey: nacl.util.encodeBase64(fileKey),
@@ -364,7 +364,7 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
     const headerLength = new Buffer(4);
     headerLength.writeUInt32LE(header.length);
 
-    debug("Header length is " + hex(headerLength));
+    debug(`Header length is ${hex(headerLength)}`);
 
     let outputByteCount = 0;
 
@@ -468,7 +468,7 @@ export function decryptStream(keyPair, inputStream, outputStream,
     { armor }={}, callback) {
   const toId = miniLockId(keyPair.publicKey);
 
-  debug("Our miniLock ID is " + toId);
+  debug(`Our miniLock ID is ${toId}`);
 
   let asciiBuffer = '';
 

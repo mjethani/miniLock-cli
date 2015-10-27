@@ -89,7 +89,7 @@ function printUsage() {
 function printHelp(topic) {
   try {
     let help = fs.readFileSync(path.resolve(__dirname, '..', 'help',
-          (topic || 'default') + '.help'), 'utf8');
+          `${topic || 'default'}.help`), 'utf8');
     process.stdout.write(help);
   } catch (error) {
     printUsage();
@@ -132,7 +132,7 @@ function readPassphrase(passphrase, minEntropy, callback) {
 
       if (entropy < minEntropy) {
         console.log();
-        console.log('Entropy: ' + entropy + '/' + minEntropy);
+        console.log(`Entropy: ${entropy}/${minEntropy}`);
         console.log();
         console.log("Let's try once more ...");
         console.log();
@@ -154,7 +154,7 @@ function generateId(email, passphrase, callback) {
 function printId(id) {
   if (process.stdout.isTTY) {
     console.log();
-    console.log('Your miniLock ID: ' + id + '.');
+    console.log(`Your miniLock ID: ${id}.`);
     console.log();
   } else {
     console.log(id);
@@ -200,8 +200,8 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
       passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
     }
 
-    debug("Generating key pair with email " + email
-        + " and passphrase " + passphrase);
+    debug(`Generating key pair with email ${email}`
+        + ` and passphrase ${passphrase}`);
 
     keyPairFunc = callback => {
       minilock.getKeyPair(passphrase, email, callback);
@@ -215,8 +215,8 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
   }
 
   keyPairFunc(keyPair => {
-    debug("Our public key is " + hex(keyPair.publicKey));
-    debug("Our secret key is " + hex(keyPair.secretKey));
+    debug(`Our public key is ${hex(keyPair.publicKey)}`);
+    debug(`Our secret key is ${hex(keyPair.secretKey)}`);
 
     if (!anonymous && checkId
         && minilock.miniLockId(keyPair.publicKey) !== checkId) {
@@ -232,11 +232,11 @@ function encryptFile(ids, email, passphrase, file, outputFile, armor,
       : process.stdin;
 
     const outputFilename = typeof outputFile === 'string' ? outputFile
-      : typeof file === 'string' ? file + '.minilock'
+      : typeof file === 'string' ? `${file}.minilock`
       : null;
 
     if (typeof outputFilename === 'string') {
-      debug("Writing to file " + outputFilename);
+      debug(`Writing to file ${outputFilename}`);
     } else if (!process.stdout.isTTY) {
       debug("Writing to stdout");
     }
@@ -270,8 +270,8 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
   let keyPairFunc = null;
 
   if (!keyPair) {
-    debug("Generating key pair with email " + email
-        + " and passphrase " + passphrase);
+    debug(`Generating key pair with email ${email}`
+        + ` and passphrase ${passphrase}`);
 
     keyPairFunc = callback => {
       minilock.getKeyPair(passphrase, email, callback);
@@ -285,8 +285,8 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
   }
 
   keyPairFunc(keyPair => {
-    debug("Our public key is " + hex(keyPair.publicKey));
-    debug("Our secret key is " + hex(keyPair.secretKey));
+    debug(`Our public key is ${hex(keyPair.publicKey)}`);
+    debug(`Our secret key is ${hex(keyPair.secretKey)}`);
 
     if (checkId && minilock.miniLockId(keyPair.publicKey) !== checkId) {
       callback(ERR_ID_CHECK_FAILED, keyPair);
@@ -304,7 +304,7 @@ function decryptFile(email, passphrase, file, outputFile, armor, checkId,
       : null;
 
     if (typeof outputFilename === 'string') {
-      debug("Writing to file " + outputFilename);
+      debug(`Writing to file ${outputFilename}`);
     } else if (!process.stdout.isTTY) {
       debug("Writing to stdout");
     }
@@ -343,7 +343,7 @@ function handleIdCommand() {
   const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
 
   if (options['!?'].length > 0) {
-    die("Unknown option '" + options['!?'][0] + "'.");
+    die(`Unknown option '${options['!?'][0]}'.`);
   }
 
   let email = options['...'][0] || options.email;
@@ -394,7 +394,7 @@ function handleIdCommand() {
       die();
     }
 
-    debug("Using passphrase " + passphrase);
+    debug(`Using passphrase ${passphrase}`);
 
     generateId(email, passphrase, (error, id, keyPair) => {
       if (error) {
@@ -436,7 +436,7 @@ function handleEncryptCommand() {
   const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
 
   if (options['!?'].length > 0) {
-    die("Unknown option '" + options['!?'][0] + "'.");
+    die(`Unknown option '${options['!?'][0]}'.`);
   }
 
   let ids = options['...'].slice();
@@ -457,7 +457,7 @@ function handleEncryptCommand() {
 
   ids.forEach(id => {
     if (!minilock.validateId(id)) {
-      die(id + " doesn't look like a valid miniLock ID.");
+      die(`${id} doesn't look like a valid miniLock ID.`);
     }
   });
 
@@ -495,7 +495,7 @@ function handleEncryptCommand() {
     }
 
     if (!anonymous && !keyPair) {
-      debug("Using passphrase " + passphrase);
+      debug(`Using passphrase ${passphrase}`);
     }
 
     encryptFile(ids, email, passphrase, file, outputFile, armor, includeSelf,
@@ -503,7 +503,7 @@ function handleEncryptCommand() {
         (error, keyPair, length, filename) => {
       if (error) {
         if (error === minilock.ERR_ID_CHECK_FAILED) {
-          console.error('Incorrect passphrase for ' + email);
+          console.error(`Incorrect passphrase for ${email}`);
         } else {
           logError(error);
         }
@@ -512,12 +512,12 @@ function handleEncryptCommand() {
 
       if (process.stdout.isTTY) {
         console.log();
-        console.log('Encrypted from ' + minilock.miniLockId(keyPair.publicKey)
-            + '.');
+        console.log(`Encrypted from`
+            + ` ${minilock.miniLockId(keyPair.publicKey)}.`);
         console.log();
 
         if (typeof filename === 'string') {
-          console.log('Wrote ' + length + ' bytes to ' + filename);
+          console.log(`Wrote ${length} bytes to ${filename}`);
           console.log();
         }
       }
@@ -546,7 +546,7 @@ function handleDecryptCommand() {
   const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
 
   if (options['!?'].length > 0) {
-    die("Unknown option '" + options['!?'][0] + "'.");
+    die(`Unknown option '${options['!?'][0]}'.`);
   }
 
   let email = options.email;
@@ -590,20 +590,20 @@ function handleDecryptCommand() {
       die();
     }
 
-    debug("Using passphrase " + passphrase);
+    debug(`Using passphrase ${passphrase}`);
 
     decryptFile(email, passphrase, file, outputFile, armor, checkId, keyPair,
         (error, keyPair, length, filename, senderId, originalFilename) => {
       if (error) {
         if (error === minilock.ERR_ID_CHECK_FAILED) {
-          console.error('Incorrect passphrase for ' + email);
+          console.error(`Incorrect passphrase for ${email}`);
         } else if (error === minilock.ERR_PARSE_ERROR) {
           console.error('The file appears corrupt.');
         } else if (error === minilock.ERR_UNSUPPORTED_VERSION) {
           console.error('This miniLock version is not supported.');
         } else if (error === minilock.ERR_NOT_A_RECIPIENT) {
-          console.error('The message is not intended for '
-              + minilock.miniLockId(keyPair.publicKey) + '.');
+          console.error(`The message is not intended for`
+              + ` ${minilock.miniLockId(keyPair.publicKey)}.`);
         } else if (error === minilock.ERR_MESSAGE_INTEGRITY_CHECK_FAILED) {
           console.error('The message is corrupt.');
         } else {
@@ -614,16 +614,16 @@ function handleDecryptCommand() {
 
       if (process.stdout.isTTY) {
         console.log();
-        console.log('Message from ' + senderId + '.');
+        console.log(`Message from ${senderId}.`);
         console.log();
 
         if (originalFilename) {
-          console.log('Original filename: ' + originalFilename);
+          console.log(`Original filename: ${originalFilename}`);
           console.log();
         }
 
         if (typeof filename === 'string') {
-          console.log('Wrote ' + length + ' bytes to ' + filename);
+          console.log(`Wrote ${length} bytes to ${filename}`);
           console.log();
         }
       }
@@ -636,7 +636,7 @@ function handleHelpCommand() {
 }
 
 function handleVersionCommand() {
-  console.log('miniLock-cli v' + version);
+  console.log(`miniLock-cli v${version}`);
 }
 
 function handleLicenseCommand() {
