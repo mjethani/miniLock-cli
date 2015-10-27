@@ -8,6 +8,8 @@ import * as minilock from './minilock';
 
 import { async, die, hex, home, logError, parseArgs, prompt } from './util';
 
+import Dictionary from './dictionary';
+
 import debug from './debug';
 
 import { setDebugFunc } from './debug';
@@ -40,18 +42,10 @@ function loadProfile() {
 
 function loadDictionary() {
   try {
-    let data = fs.readFileSync(path.resolve(__dirname, '..', 'dictionary'),
-        { encoding: 'utf8' });
-
-    dictionary = data.split('\n').map(line =>
-      // Trim spaces and strip out comments.
-      line.replace(/^\s*|\s*$/g, '').replace(/^#.*/, '')
-    ).filter(line =>
-      // Skip blank lines.
-      line !== ''
-    );
+    dictionary = Dictionary.loadFromFile(path.resolve(__dirname, '..',
+          'dictionary'));
   } catch (error) {
-    dictionary = [];
+    dictionary = new Dictionary();
   }
 }
 
@@ -60,7 +54,7 @@ function randomPassphrase(entropy) {
     loadDictionary();
   }
 
-  if (dictionary.length === 0) {
+  if (dictionary.wordCount === 0) {
     return null;
   }
 
@@ -69,9 +63,9 @@ function randomPassphrase(entropy) {
   while (zxcvbn(passphrase).entropy < entropy) {
     // Pick a random word from the dictionary and add it to the passphrase.
     const randomNumber = new Buffer(nacl.randomBytes(2)).readUInt16BE();
-    const index = Math.floor((randomNumber / 0x10000) * dictionary.length);
+    const index = Math.floor((randomNumber / 0x10000) * dictionary.wordCount);
 
-    passphrase += (passphrase && ' ' || '') + dictionary[index];
+    passphrase += (passphrase && ' ' || '') + dictionary.wordAt(index);
   }
 
   return passphrase;
