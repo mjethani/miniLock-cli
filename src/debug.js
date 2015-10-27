@@ -1,8 +1,8 @@
 let debugFunc = null;
 
-export default function debug() {
+export default function debug(...rest) {
   if (debugFunc) {
-    debugFunc.apply(null, arguments);
+    debugFunc(...rest);
   }
 }
 

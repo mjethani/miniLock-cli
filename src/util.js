@@ -10,13 +10,13 @@ export function hex(data) {
 
 export function async(func, ...args) {
   process.nextTick(() => {
-    func.apply(null, args);
+    func(...args);
   });
 }
 
-export function die() {
-  if (arguments.length > 0) {
-    console.error.apply(console, arguments);
+export function die(...rest) {
+  if (rest.length > 0) {
+    console.error(...rest);
   }
 
   process.exit(1);
