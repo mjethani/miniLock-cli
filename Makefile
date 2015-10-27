@@ -32,6 +32,7 @@ tag: SIGNED.md
 endif
 
 clean:
+	rm -rf build
 	git checkout SIGNED.md
 
 .PHONY: clean version build watch sign verify tag
