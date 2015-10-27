@@ -11,7 +11,7 @@ import { async, hex, temporaryFilename } from './util';
 
 import debug from './debug';
 
-import _version from './version';
+import version from './version';
 
 export const ERR_ID_CHECK_FAILED = 'ID check failed';
 export const ERR_PARSE_ERROR = 'Parse error';
@@ -388,7 +388,7 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
       asciiIndent = outputHeader.length % (ARMOR_WIDTH + 1);
 
       outputHeader = '-----BEGIN MINILOCK FILE-----\n'
-        + 'Version: miniLock-cli v' + _version + '\n'
+        + 'Version: miniLock-cli v' + version + '\n'
         + '\n'
         + outputHeader;
     }

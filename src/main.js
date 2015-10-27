@@ -12,7 +12,7 @@ import debug from './debug';
 
 import { setDebugFunc } from './debug';
 
-import _version from './version';
+import version from './version';
 
 let profile = null;
 
@@ -187,8 +187,8 @@ function saveId(email, id, keyPair) {
       JSON.stringify(profile));
 }
 
-function encryptFile(ids, email, passphrase, file, outputFile,
-    armor, includeSelf, anonymous, checkId, keyPair, callback) {
+function encryptFile(ids, email, passphrase, file, outputFile, armor,
+    includeSelf, anonymous, checkId, keyPair, callback) {
   debug("Begin file encryption");
 
   let keyPairFunc = null;
@@ -263,8 +263,8 @@ function encryptFile(ids, email, passphrase, file, outputFile,
   });
 }
 
-function decryptFile(email, passphrase, file, outputFile,
-    armor, checkId, keyPair, callback) {
+function decryptFile(email, passphrase, file, outputFile, armor, checkId,
+    keyPair, callback) {
   debug("Begin file decryption");
 
   let keyPairFunc = null;
@@ -498,8 +498,8 @@ function handleEncryptCommand() {
       debug("Using passphrase " + passphrase);
     }
 
-    encryptFile(ids, email, passphrase, file, outputFile,
-        armor, includeSelf, anonymous, checkId, keyPair,
+    encryptFile(ids, email, passphrase, file, outputFile, armor, includeSelf,
+        anonymous, checkId, keyPair,
         (error, keyPair, length, filename) => {
       if (error) {
         if (error === minilock.ERR_ID_CHECK_FAILED) {
@@ -592,8 +592,7 @@ function handleDecryptCommand() {
 
     debug("Using passphrase " + passphrase);
 
-    decryptFile(email, passphrase, file, outputFile,
-        armor, checkId, keyPair,
+    decryptFile(email, passphrase, file, outputFile, armor, checkId, keyPair,
         (error, keyPair, length, filename, senderId, originalFilename) => {
       if (error) {
         if (error === minilock.ERR_ID_CHECK_FAILED) {
@@ -637,7 +636,7 @@ function handleHelpCommand() {
 }
 
 function handleVersionCommand() {
-  console.log('miniLock-cli v' + _version);
+  console.log('miniLock-cli v' + version);
 }
 
 function handleLicenseCommand() {
