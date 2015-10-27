@@ -6,7 +6,7 @@ import zxcvbn   from 'zxcvbn';
 
 import * as minilock from './minilock';
 
-import { async, die, home, logError, parseArgs, prompt } from './util';
+import { async, die, hex, home, logError, parseArgs, prompt } from './util';
 
 import debug from './debug';
 
@@ -187,6 +187,144 @@ function saveId(email, id, keyPair) {
       JSON.stringify(profile));
 }
 
+function encryptFile(ids, email, passphrase, file, outputFile,
+    armor, includeSelf, anonymous, checkId, keyPair, callback) {
+  debug("Begin file encryption");
+
+  let keyPairFunc = null;
+
+  if (anonymous || !keyPair) {
+    if (anonymous) {
+      // Generate a random passphrase.
+      email = 'Anonymous';
+      passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
+    }
+
+    debug("Generating key pair with email " + email
+        + " and passphrase " + passphrase);
+
+    keyPairFunc = callback => {
+      minilock.getKeyPair(passphrase, email, callback);
+    };
+  } else {
+    keyPairFunc = callback => {
+      async(() => {
+        callback(keyPair);
+      });
+    };
+  }
+
+  keyPairFunc(keyPair => {
+    debug("Our public key is " + hex(keyPair.publicKey));
+    debug("Our secret key is " + hex(keyPair.secretKey));
+
+    if (!anonymous && checkId
+        && minilock.miniLockId(keyPair.publicKey) !== checkId) {
+      callback(ERR_ID_CHECK_FAILED, keyPair);
+      return;
+    }
+
+    if (typeof file !== 'string' && process.stdin.isTTY) {
+      console.error('Reading from stdin ...');
+    }
+
+    const inputStream = typeof file === 'string' ? fs.createReadStream(file)
+      : process.stdin;
+
+    const outputFilename = typeof outputFile === 'string' ? outputFile
+      : typeof file === 'string' ? file + '.minilock'
+      : null;
+
+    if (typeof outputFilename === 'string') {
+      debug("Writing to file " + outputFilename);
+    } else if (!process.stdout.isTTY) {
+      debug("Writing to stdout");
+    }
+
+    if (!armor && typeof outputFilename !== 'string' && process.stdout.isTTY) {
+      console.error('WARNING: Not writing output to terminal.');
+    }
+
+    const outputStream = typeof outputFilename === 'string'
+      ? fs.createWriteStream(outputFilename) : armor || !process.stdout.isTTY
+      ? process.stdout : null;
+
+    minilock.encryptStream(keyPair, inputStream, outputStream, ids, {
+      filename: typeof file === 'string' ? file : null,
+      armor,
+      includeSelf
+    }, (error, outputByteCount) => {
+      if (!error) {
+        debug("File encryption complete");
+      }
+
+      callback(error, keyPair, outputByteCount, outputFilename);
+    });
+  });
+}
+
+function decryptFile(email, passphrase, file, outputFile,
+    armor, checkId, keyPair, callback) {
+  debug("Begin file decryption");
+
+  let keyPairFunc = null;
+
+  if (!keyPair) {
+    debug("Generating key pair with email " + email
+        + " and passphrase " + passphrase);
+
+    keyPairFunc = callback => {
+      minilock.getKeyPair(passphrase, email, callback);
+    };
+  } else {
+    keyPairFunc = callback => {
+      async(() => {
+        callback(keyPair);
+      });
+    };
+  }
+
+  keyPairFunc(keyPair => {
+    debug("Our public key is " + hex(keyPair.publicKey));
+    debug("Our secret key is " + hex(keyPair.secretKey));
+
+    if (checkId && minilock.miniLockId(keyPair.publicKey) !== checkId) {
+      callback(ERR_ID_CHECK_FAILED, keyPair);
+      return;
+    }
+
+    if (typeof file !== 'string' && process.stdin.isTTY) {
+      console.error('Reading from stdin ...');
+    }
+
+    const inputStream = typeof file === 'string' ? fs.createReadStream(file)
+      : process.stdin;
+
+    const outputFilename = typeof outputFile === 'string' ? outputFile
+      : null;
+
+    if (typeof outputFilename === 'string') {
+      debug("Writing to file " + outputFilename);
+    } else if (!process.stdout.isTTY) {
+      debug("Writing to stdout");
+    }
+
+    const outputStream = typeof outputFilename === 'string'
+      ? fs.createWriteStream(outputFilename) : process.stdout;
+
+    minilock.decryptStream(keyPair, inputStream, outputStream, {
+      armor
+    }, (error, outputByteCount, { senderId, originalFilename }={}) => {
+      if (!error) {
+        debug("File decryption complete");
+      }
+
+      callback(error, keyPair, outputByteCount, outputFilename, senderId,
+          originalFilename);
+    });
+  });
+}
+
 function handleIdCommand() {
   const defaultOptions = {
     'email':           null,
@@ -360,7 +498,7 @@ function handleEncryptCommand() {
       debug("Using passphrase " + passphrase);
     }
 
-    minilock.encryptFile(ids, email, passphrase, file, outputFile,
+    encryptFile(ids, email, passphrase, file, outputFile,
         armor, includeSelf, anonymous, checkId, keyPair,
         (error, keyPair, length, filename) => {
       if (error) {
@@ -454,7 +592,7 @@ function handleDecryptCommand() {
 
     debug("Using passphrase " + passphrase);
 
-    minilock.decryptFile(email, passphrase, file, outputFile,
+    decryptFile(email, passphrase, file, outputFile,
         armor, checkId, keyPair,
         (error, keyPair, length, filename, senderId, originalFilename) => {
       if (error) {
