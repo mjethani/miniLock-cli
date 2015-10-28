@@ -13,7 +13,7 @@ import Profile    from './profile';
 
 import debug from './debug';
 
-import { setDebugFunc } from './debug';
+import { installDebugHandler } from './debug';
 
 import version from './version';
 
@@ -625,7 +625,7 @@ export function run() {
   if (process.argv[2] === '--debug') {
     process.argv.splice(2, 1);
 
-    setDebugFunc((...rest) => {
+    installDebugHandler((...rest) => {
       console.error(...rest);
     });
   }
