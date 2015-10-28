@@ -4,6 +4,20 @@ import readline from 'readline';
 
 import nacl     from 'tweetnacl';
 
+export function promisify(thisArg, func) {
+  return (...args) => {
+    return new Promise((resolve, reject) => {
+      func.call(thisArg, ...args, (error, ...values) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(values);
+        }
+      });
+    });
+  };
+}
+
 export function hex(data) {
   return new Buffer(data).toString('hex');
 }

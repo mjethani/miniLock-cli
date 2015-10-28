@@ -6,7 +6,8 @@ import zxcvbn   from 'zxcvbn';
 
 import * as minilock from './minilock';
 
-import { async, die, hex, home, logError, parseArgs, prompt } from './util';
+import { async, die, hex, home, logError, parseArgs, promisify, prompt }
+  from './util';
 
 import Dictionary from './dictionary';
 import Profile    from './profile';
@@ -16,6 +17,9 @@ import debug from './debug';
 import { installDebugHandler } from './debug';
 
 import version from './version';
+
+const encryptStream = promisify(null, minilock.encryptStream);
+const decryptStream = promisify(null, minilock.decryptStream);
 
 let profile = null;
 
@@ -167,7 +171,7 @@ function encryptFileWithKeyPair(keyPair, ids, file, outputFile, armor,
 
   if (!anonymous && checkId
       && minilock.miniLockId(keyPair.publicKey) !== checkId) {
-    callback(ERR_ID_CHECK_FAILED, keyPair);
+    callback(minilock.ERR_ID_CHECK_FAILED, keyPair);
     return;
   }
 
@@ -196,12 +200,14 @@ function encryptFileWithKeyPair(keyPair, ids, file, outputFile, armor,
     ? fs.createWriteStream(outputFilename) : armor || !process.stdout.isTTY
     ? process.stdout : null;
 
-  minilock.encryptStream(keyPair, inputStream, outputStream, ids, {
+  encryptStream(keyPair, inputStream, outputStream, ids, {
     filename: typeof file === 'string' ? file : null,
     armor,
     includeSelf
-  }, (error, outputByteCount) => {
-    callback(error, keyPair, outputByteCount, outputFilename);
+  }).then(([ outputByteCount ]) => {
+    callback(null, keyPair, outputByteCount, outputFilename);
+  }, error => {
+    callback(error);
   });
 }
 
@@ -211,7 +217,7 @@ function decryptFileWithKeyPair(keyPair, file, outputFile, armor, checkId,
   debug(`Our secret key is ${hex(keyPair.secretKey)}`);
 
   if (checkId && minilock.miniLockId(keyPair.publicKey) !== checkId) {
-    callback(ERR_ID_CHECK_FAILED, keyPair);
+    callback(minilock.ERR_ID_CHECK_FAILED, keyPair);
     return;
   }
 
@@ -234,11 +240,13 @@ function decryptFileWithKeyPair(keyPair, file, outputFile, armor, checkId,
   const outputStream = typeof outputFilename === 'string'
     ? fs.createWriteStream(outputFilename) : process.stdout;
 
-  minilock.decryptStream(keyPair, inputStream, outputStream, {
+  decryptStream(keyPair, inputStream, outputStream, {
     armor
-  }, (error, outputByteCount, { senderId, originalFilename }={}) => {
-    callback(error, keyPair, outputByteCount, outputFilename, senderId,
+  }).then(([ outputByteCount, { senderId, originalFilename }={} ]) => {
+    callback(null, keyPair, outputByteCount, outputFilename, senderId,
         originalFilename);
+  }, error => {
+    callback(error);
   });
 }
 
