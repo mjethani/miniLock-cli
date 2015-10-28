@@ -13,7 +13,6 @@ import debug from './debug';
 
 import version from './version';
 
-export const ERR_ID_CHECK_FAILED = 'ID check failed';
 export const ERR_PARSE_ERROR = 'Parse error';
 export const ERR_UNSUPPORTED_VERSION = 'Unsupported version';
 export const ERR_NOT_A_RECIPIENT = 'Not a recipient';
@@ -536,7 +535,7 @@ export function decryptStream(keyPair, inputStream, outputStream,
         buffer = Buffer.concat([ buffer, chunk ]);
       } catch (error) {
         // If the buffer length exceeds 0x3fffffff, it'll throw a RangeError.
-        callback(error_ = error.name === 'RangeError'
+        callback((error_ = error) instanceof RangeError
             ? ERR_PARSE_ERROR : error);
         return;
       }
@@ -596,7 +595,7 @@ export function decryptStream(keyPair, inputStream, outputStream,
             }
           }
         } catch (error) {
-          callback(error_ = error.name === 'SyntaxError'
+          callback((error_ = error) instanceof SyntaxError
               ? ERR_PARSE_ERROR : error);
           return;
         }
