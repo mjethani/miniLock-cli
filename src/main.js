@@ -154,7 +154,8 @@ function saveId(email, id, keyPair) {
         'profile.json'));
 }
 
-function encryptFile(keyPair, ids, file, outputFile, { armor, includeSelf }) {
+function encryptFile(keyPair, ids, file, outputFile,
+    { armor, includeSelf }={}) {
   return new Promise((resolve, reject) => {
     if (typeof file !== 'string' && process.stdin.isTTY) {
       console.error('Reading from stdin ...');
@@ -193,7 +194,7 @@ function encryptFile(keyPair, ids, file, outputFile, { armor, includeSelf }) {
   });
 }
 
-function decryptFile(keyPair, file, outputFile, { armor }) {
+function decryptFile(keyPair, file, outputFile, { armor }={}) {
   return new Promise((resolve, reject) => {
     if (typeof file !== 'string' && process.stdin.isTTY) {
       console.error('Reading from stdin ...');
@@ -545,7 +546,7 @@ function handleDecryptCommand() {
 
     decryptFile(keyPair, file, outputFile, { armor })
     .then(([ outputByteCount, outputFilename,
-          { senderId, originalFilename } ]) => {
+          { senderId, originalFilename }={} ]) => {
       debug("File decryption complete");
 
       if (process.stdout.isTTY) {

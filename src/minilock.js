@@ -296,10 +296,6 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
   const filenameBuffer = new Buffer(256).fill(0);
 
   if (typeof filename === 'string') {
-    if (new Buffer(path.basename(filename)).length > 256) {
-      console.error('WARNING: Filename is too long and will be truncated.');
-    }
-
     filenameBuffer.write(path.basename(filename));
   }
 
