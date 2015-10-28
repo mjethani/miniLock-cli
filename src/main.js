@@ -9,6 +9,7 @@ import * as minilock from './minilock';
 import { async, die, hex, home, logError, parseArgs, prompt } from './util';
 
 import Dictionary from './dictionary';
+import Profile    from './profile';
 
 import debug from './debug';
 
@@ -21,20 +22,11 @@ let profile = null;
 let dictionary = null;
 
 function loadProfile() {
-  const profileDirectory = path.resolve(home(), '.mlck');
-
-  let data = null;
-
   try {
-    data = fs.readFileSync(path.resolve(profileDirectory, 'profile.json'),
-        { encoding: 'utf8' });
+    profile = Profile.loadFromFile(path.resolve(home(), '.mlck',
+          'profile.json'));
   } catch (error) {
-  }
-
-  if (data) {
-    try {
-      profile = JSON.parse(data);
-    } catch (error) {
+    if (error instanceof SyntaxError) {
       console.error('WARNING: Profile data is corrupt.');
     }
   }
