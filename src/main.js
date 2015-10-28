@@ -148,29 +148,19 @@ function printId(id) {
 }
 
 function saveId(email, id, keyPair) {
-  const profileDirectory = path.resolve(home(), '.mlck');
-
-  try {
-    fs.mkdirSync(profileDirectory);
-  } catch (error) {
-    if (error.code !== 'EEXIST') {
-      throw error;
-    }
-  }
-
-  const profile = { version: '0.1' };
+  const data = {};
 
   if (keyPair) {
     // Store only the secret key. If it's compromised, you have to get a new
     // one. No other information is leaked.
-    profile.secret = minilock.miniLockId(keyPair.secretKey);
+    data.secret = minilock.miniLockId(keyPair.secretKey);
   } else {
-    profile.email = email;
-    profile.id = id;
+    data.email = email;
+    data.id = id;
   }
 
-  fs.writeFileSync(path.resolve(profileDirectory, 'profile.json'),
-      JSON.stringify(profile));
+  Profile.saveToFile(new Profile(data), path.resolve(home(), '.mlck',
+        'profile.json'));
 }
 
 function encryptFile(ids, email, passphrase, file, outputFile, armor,
