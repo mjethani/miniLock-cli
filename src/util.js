@@ -125,7 +125,7 @@ export function parseArgs(args, ...rest) {
 
 export function prompt(label, quiet, callback) {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    throw new Error('No TTY.');
+    throw new Error('No TTY');
   }
 
   if (arguments.length > 0) {
