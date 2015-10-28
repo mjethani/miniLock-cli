@@ -1,4 +1,5 @@
-import fs from 'fs';
+import crypto from 'crypto';
+import fs     from 'fs';
 
 const words_ = Symbol();
 
@@ -27,6 +28,17 @@ export default class Dictionary {
 
   wordAt(index) {
     return index < this[words_].length ? this[words_][index] : null;
+  }
+
+  randomWord() {
+    if (this[words_].length === 0) {
+      return null;
+    }
+
+    const randomNumber = crypto.randomBytes(2).readUInt16BE();
+    const index = Math.floor((randomNumber / 0x10000) * this[words_].length);
+
+    return this[words_][index];
   }
 }
 

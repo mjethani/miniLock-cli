@@ -54,10 +54,7 @@ function randomPassphrase(entropy) {
 
   while (zxcvbn(passphrase).entropy < entropy) {
     // Pick a random word from the dictionary and add it to the passphrase.
-    const randomNumber = new Buffer(nacl.randomBytes(2)).readUInt16BE();
-    const index = Math.floor((randomNumber / 0x10000) * dictionary.wordCount);
-
-    passphrase += (passphrase && ' ' || '') + dictionary.wordAt(index);
+    passphrase += (passphrase && ' ' || '') + dictionary.randomWord();
   }
 
   return passphrase;
