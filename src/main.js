@@ -216,7 +216,11 @@ function decryptFile(keyPair, file, outputFile, { armor }={}) {
       ? fs.createWriteStream(outputFilename) : process.stdout;
 
     decryptStream(keyPair, inputStream, outputStream, {
-      armor
+      armor,
+      envelope: {
+        before: '\n--- BEGIN MESSAGE ---\n',
+        after:  '\n--- END MESSAGE ---\n'
+      }
     }).then(([ outputByteCount, { senderId, originalFilename }={} ]) => {
       resolve([ outputByteCount, outputFilename,
             { senderId, originalFilename } ]);

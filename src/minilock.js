@@ -460,7 +460,7 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
 }
 
 export function decryptStream(keyPair, inputStream, outputStream,
-    { armor }={}, callback) {
+    { armor, envelope }={}, callback) {
   const toId = miniLockId(keyPair.publicKey);
 
   debug(`Our miniLock ID is ${toId}`);
@@ -605,8 +605,9 @@ export function decryptStream(keyPair, inputStream, outputStream,
               nacl.util.decodeBase64(decryptInfo.fileInfo.fileNonce),
               0x100000);
 
-          if (outputStream === process.stdout && process.stdout.isTTY) {
-            console.log('--- BEGIN MESSAGE ---');
+          if (envelope && envelope.before && outputStream === process.stdout
+              && process.stdout.isTTY) {
+            outputStream.write(envelope.before);
           }
         }
 
@@ -635,8 +636,9 @@ export function decryptStream(keyPair, inputStream, outputStream,
       return;
     }
 
-    if (outputStream === process.stdout && process.stdout.isTTY) {
-      console.log('--- END MESSAGE ---');
+    if (envelope && envelope.after && outputStream === process.stdout
+        && process.stdout.isTTY) {
+      outputStream.write(envelope.after);
     }
 
     if (nacl.util.encodeBase64(hash.digest())
