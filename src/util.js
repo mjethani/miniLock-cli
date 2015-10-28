@@ -28,6 +28,14 @@ export function async(func, ...args) {
   });
 }
 
+export function asyncThen(...args) {
+  return new Promise(resolve => {
+    process.nextTick(() => {
+      resolve(args);
+    });
+  });
+}
+
 export function die(...rest) {
   if (rest.length > 0) {
     console.error(...rest);
@@ -137,44 +145,42 @@ export function parseArgs(args, ...rest) {
   obj);
 }
 
-export function prompt(label, quiet, callback) {
-  if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    throw new Error('No TTY');
-  }
-
-  if (arguments.length > 0) {
-    callback = arguments[arguments.length - 1];
-    if (typeof callback !== 'function') {
-      callback = null;
-    }
-  }
-
-  if (typeof quiet !== 'boolean') {
-    quiet = false;
-  }
-
-  if (typeof label === 'string') {
-    process.stdout.write(label);
-  }
-
-  const rl = readline.createInterface({
-    input: process.stdin,
-    // The quiet argument is for things like passwords. It turns off standard
-    // output so nothing is displayed.
-    output: !quiet && process.stdout || null,
-    terminal: true
-  });
-
-  rl.on('line', line => {
-    rl.close();
-
-    if (quiet) {
-      process.stdout.write(os.EOL);
+export function prompt(label, quiet) {
+  return new Promise((resolve, reject) => {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+      throw new Error('No TTY');
     }
 
-    if (callback) {
-      callback(null, line);
+    if (typeof quiet !== 'boolean') {
+      quiet = false;
     }
+
+    if (typeof label === 'string') {
+      process.stdout.write(label);
+    }
+
+    const rl = readline.createInterface({
+      input: process.stdin,
+      // The quiet argument is for things like passwords. It turns off standard
+      // output so nothing is displayed.
+      output: !quiet && process.stdout || null,
+      terminal: true
+    });
+
+    rl.on('line', line => {
+      try {
+        rl.close();
+
+        if (quiet) {
+          process.stdout.write(os.EOL);
+        }
+
+        resolve(line);
+
+      } catch (error) {
+        reject(error);
+      }
+    });
   });
 }
 
