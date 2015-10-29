@@ -89,6 +89,7 @@ function readPassphrase(minEntropy=100) {
     if (minEntropy) {
       // Display a dictionary-based random passphrase as a hint/suggestion.
       const example = randomPassphrase(minEntropy);
+
       if (example) {
         console.log(example);
         console.log();
@@ -303,6 +304,7 @@ function handleIdCommand() {
     debug(`Using passphrase ${passphrase}`);
 
     return generateId(email, passphrase);
+
   }).then(([ id, keyPair ]) => {
     if (saveKey) {
       saveId(email, id, keyPair);
@@ -413,6 +415,7 @@ function handleEncryptCommand() {
           + ` and passphrase ${passphrase_}`);
 
       return generateId(email_, passphrase_);
+
     } else {
       return asyncThen(null, keyPair);
     }
@@ -531,6 +534,7 @@ function handleDecryptCommand() {
           + ` and passphrase ${passphrase}`);
 
       return generateId(email, passphrase);
+
     } else {
       return asyncThen(null, keyPair);
     }

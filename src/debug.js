@@ -14,12 +14,4 @@ export function installDebugHandler(handler) {
   debugHandler = handler;
 }
 
-export function uninstallDebugHandler() {
-  const handler = debugHandler;
-
-  debugHandler = null;
-
-  return handler;
-}
-
 // vim: et ts=2 sw=2
