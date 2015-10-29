@@ -1,7 +1,7 @@
+import crypto   from 'crypto';
 import fs       from 'fs';
 import path     from 'path';
 
-import nacl     from 'tweetnacl';
 import zxcvbn   from 'zxcvbn';
 
 import * as minilock from './minilock';
@@ -155,7 +155,7 @@ function saveId(email, id, keyPair) {
         'profile.json'));
 }
 
-function encryptFile(keyPair, ids, file, outputFile,
+function encryptFile(keyPair, file, outputFile, ids,
     { armor, includeSelf }={}) {
   return new Promise((resolve, reject) => {
     if (typeof file !== 'string' && process.stdin.isTTY) {
@@ -270,7 +270,7 @@ function handleIdCommand() {
   if (anonymous) {
     // Generate a random passphrase.
     email = 'Anonymous';
-    passphrase = new Buffer(nacl.randomBytes(32)).toString('base64');
+    passphrase = crypto.randomBytes(32).toString('base64');
   }
 
   if (typeof email !== 'string' || (!anonymous && typeof secret === 'string')) {
@@ -294,31 +294,35 @@ function handleIdCommand() {
       console.error('No profile data available.');
     }
 
-    return;
+  } else {
+    const promise = typeof passphrase === 'string' ? asyncThen(passphrase)
+      : readPassphrase();
+
+    promise.then(passphrase => {
+      if (!anonymous) {
+        debug(`Using passphrase ${passphrase}`);
+      }
+
+      debug(`Generating key pair with email ${email}`
+          + ` and passphrase ${passphrase}`);
+
+      return generateId(email, passphrase);
+
+    }).then(([ id, keyPair ]) => {
+      if (saveKey) {
+        saveId(email, id, keyPair);
+      } else if (save) {
+        saveId(email, id);
+      }
+
+      printId(id);
+
+    }).catch(error => {
+      logError(error);
+
+      die();
+    });
   }
-
-  const promise = typeof passphrase === 'string' ? asyncThen(passphrase)
-    : readPassphrase();
-
-  promise.then(passphrase => {
-    debug(`Using passphrase ${passphrase}`);
-
-    return generateId(email, passphrase);
-
-  }).then(([ id, keyPair ]) => {
-    if (saveKey) {
-      saveId(email, id, keyPair);
-    } else if (save) {
-      saveId(email, id);
-    }
-
-    printId(id);
-
-  }).catch(error => {
-    logError(error);
-
-    die();
-  });
 }
 
 function handleEncryptCommand() {
@@ -408,7 +412,7 @@ function handleEncryptCommand() {
       if (anonymous) {
         // Generate a random passphrase.
         email_ = 'Anonymous';
-        passphrase_ = new Buffer(nacl.randomBytes(32)).toString('base64');
+        passphrase_ = crypto.randomBytes(32).toString('base64');
       }
 
       debug(`Generating key pair with email ${email_}`
@@ -433,7 +437,7 @@ function handleEncryptCommand() {
 
     debug("Begin file encryption");
 
-    encryptFile(keyPair, ids, file, outputFile, { armor, includeSelf })
+    encryptFile(keyPair, file, outputFile, ids, { armor, includeSelf })
     .then(([ outputByteCount, outputFilename ]) => {
       debug("File encryption complete");
 
