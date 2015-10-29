@@ -242,7 +242,7 @@ function handleIdCommand() {
 
   const shortcuts = {
     '-e': '--email=',
-    '-P': '--passphrase='
+    '-P': '--passphrase=',
   };
 
   const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
@@ -251,15 +251,18 @@ function handleIdCommand() {
     die(`Unknown option '${options['!?'][0]}'.`);
   }
 
-  let email = options['...'][0] || options.email;
-  let passphrase = options.passphrase;
+  let {
+    'email':      email,
+    'passphrase': passphrase,
+    'secret':     secret,
+    'anonymous':  anonymous,
+    'save':       save,
+    'save-key':   saveKey,
+  } = options;
 
-  let secret = options.secret;
-
-  let anonymous = options.anonymous;
-
-  let save = options.save;
-  let saveKey = options['save-key'];
+  if (options['...'][0]) {
+    email = options['...'][0];
+  }
 
   let keyPair = null;
 
@@ -344,25 +347,22 @@ function handleEncryptCommand() {
 
   let ids = options['...'].slice();
 
-  let email = options.email;
-  let passphrase = options.passphrase;
+  let {
+    'email':       email,
+    'passphrase':  passphrase,
+    'secret':      secret,
+    'file':        file,
+    'output-file': outputFile,
+    'armor':       armor,
+    'self':        includeSelf,
+    'anonymous':   anonymous,
+  } = options;
 
-  let secret = options.secret;
-
-  let file = options.file;
-  let outputFile = options['output-file'];
-
-  let armor = options.armor;
-
-  let includeSelf = options['self'];
-
-  let anonymous = options.anonymous;
-
-  ids.forEach(id => {
+  for (let id of ids) {
     if (!minilock.validateId(id)) {
       die(`${id} doesn't look like a valid miniLock ID.`);
     }
-  });
+  }
 
   if (typeof secret !== 'string') {
     loadProfile();
@@ -370,7 +370,7 @@ function handleEncryptCommand() {
     secret = profile && profile.secret || null;
   }
 
-  let keyPair = !anonymous && typeof email !== 'string'
+  const keyPair = !anonymous && typeof email !== 'string'
     && secret && minilock.keyPairFromSecret(secret);
 
   if (!keyPair) {
@@ -398,8 +398,6 @@ function handleEncryptCommand() {
     if (!anonymous && !keyPair) {
       debug(`Using passphrase ${passphrase}`);
     }
-
-    debug("Begin file encryption");
 
     if (anonymous || !keyPair) {
       let email_ = email;
@@ -429,6 +427,8 @@ function handleEncryptCommand() {
 
       die();
     }
+
+    debug("Begin file encryption");
 
     encryptFile(keyPair, ids, file, outputFile, { armor, includeSelf })
     .then(([ outputByteCount, outputFilename ]) => {
@@ -483,15 +483,14 @@ function handleDecryptCommand() {
     die(`Unknown option '${options['!?'][0]}'.`);
   }
 
-  let email = options.email;
-  let passphrase = options.passphrase;
-
-  let secret = options.secret;
-
-  let file = options.file;
-  let outputFile = options['output-file'];
-
-  let armor = options.armor;
+  let {
+    'email':       email,
+    'passphrase':  passphrase,
+    'secret':      secret,
+    'file':        file,
+    'output-file': outputFile,
+    'armor':       armor,
+  } = options;
 
   if (typeof secret !== 'string') {
     loadProfile();
@@ -499,7 +498,7 @@ function handleDecryptCommand() {
     secret = profile && profile.secret || null;
   }
 
-  let keyPair = typeof email !== 'string'
+  const keyPair = typeof email !== 'string'
     && secret && minilock.keyPairFromSecret(secret);
 
   if (!keyPair) {
@@ -527,8 +526,6 @@ function handleDecryptCommand() {
       debug(`Using passphrase ${passphrase}`);
     }
 
-    debug("Begin file decryption");
-
     if (!keyPair) {
       debug(`Generating key pair with email ${email}`
           + ` and passphrase ${passphrase}`);
@@ -547,6 +544,8 @@ function handleDecryptCommand() {
 
       die();
     }
+
+    debug("Begin file decryption");
 
     decryptFile(keyPair, file, outputFile, { armor })
     .then(([ outputByteCount, outputFilename,
