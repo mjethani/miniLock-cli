@@ -1,17 +1,13 @@
-let debugHandler = null;
+let debugFunc = null;
 
 export default function debug(...rest) {
-  if (debugHandler) {
-    debugHandler(...rest);
+  if (debugFunc) {
+    debugFunc(...rest);
   }
 }
 
-export function installDebugHandler(handler) {
-  if (debugHandler) {
-    throw new Error('Debug handler already installed');
-  }
-
-  debugHandler = handler;
+export function setDebugFunc(func) {
+  debugFunc = func;
 }
 
 // vim: et ts=2 sw=2
