@@ -265,36 +265,13 @@ function handleIdCommand() {
     email = options['...'][0];
   }
 
-  let keyPair = null;
-
   if (anonymous) {
     // Generate a random passphrase.
     email = 'Anonymous';
     passphrase = crypto.randomBytes(32).toString('base64');
   }
 
-  if (typeof email !== 'string' || (!anonymous && typeof secret === 'string')) {
-    if (typeof secret !== 'string') {
-      loadProfile();
-
-      secret = profile && profile.secret || null;
-    }
-
-    if (profile && profile.id) {
-      printId(profile.id);
-    } else if (secret) {
-      keyPair = minilock.keyPairFromSecret(secret);
-
-      if (saveKey) {
-        saveId(null, null, keyPair);
-      }
-
-      printId(minilock.miniLockId(keyPair.publicKey));
-    } else {
-      console.error('No profile data available.');
-    }
-
-  } else {
+  if (typeof email === 'string') {
     const promise = typeof passphrase === 'string' ? asyncThen(passphrase)
       : readPassphrase();
 
@@ -322,6 +299,28 @@ function handleIdCommand() {
 
       die();
     });
+
+  } else if (typeof secret === 'string') {
+    const keyPair = minilock.keyPairFromSecret(secret);
+
+    if (saveKey) {
+      saveId(null, null, keyPair);
+    }
+
+    printId(minilock.miniLockId(keyPair.publicKey));
+
+  } else {
+    loadProfile();
+
+    if (profile && profile.id) {
+      printId(profile.id);
+    } else if (profile && profile.secret) {
+      const keyPair = minilock.keyPairFromSecret(profile.secret);
+
+      printId(minilock.miniLockId(keyPair.publicKey));
+    } else {
+      console.error('No profile data available.');
+    }
   }
 }
 
