@@ -137,7 +137,7 @@ function makeHeader(ids, senderInfo, fileInfo) {
   debug(`Ephemeral public key is ${hex(ephemeral.publicKey)}`);
   debug(`Ephemeral secret key is ${hex(ephemeral.secretKey)}`);
 
-  ids.forEach((id, index) => {
+  for (let id of ids) {
     debug(`Adding recipient ${id}`);
 
     const nonce = nacl.randomBytes(24);
@@ -166,7 +166,7 @@ function makeHeader(ids, senderInfo, fileInfo) {
     ));
 
     header.decryptInfo[nacl.util.encodeBase64(nonce)] = decryptInfo;
-  });
+  }
 
   return JSON.stringify(header);
 }
@@ -323,9 +323,9 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
       if (inputByteCount > 4 * 1024 && Array.isArray(encrypted)) {
         const stream = fs.createWriteStream(encryptedDataFile);
 
-        encrypted.forEach(chunk => {
+        for (let chunk of encrypted) {
           stream.write(chunk);
-        });
+        }
 
         encrypted = stream;
       }
@@ -622,11 +622,11 @@ export function decryptStream(keyPair, inputStream, outputStream,
         }
 
         // Write each decrypted chunk to the output stream.
-        array.forEach(chunk => {
+        for (let chunk of array) {
           outputStream.write(chunk);
 
           outputByteCount += chunk.length;
-        });
+        }
       }
     }
   });
