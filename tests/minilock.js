@@ -1,8 +1,11 @@
+import fs   from 'fs';
+import path from 'path';
+
 import test from 'tape';
 
 import * as minilock from '../module';
 
-import { arrayCompare, errorAsString } from '../build/util';
+import { arrayCompare, errorAsString, streamHash } from '../build/util';
 
 import { BufferStream } from '../build/stream';
 
@@ -133,12 +136,10 @@ test('Encrypt a message to self and decrypt it', t => {
 test('Encrypt a message with the armor option and decrypt it', t => {
   const message = 'This is a secret.';
 
-  const filename = 'message.txt';
-
   const encrypted = new BufferStream();
 
   minilock.encryptStream(aliceKeyPair, new BufferStream(message), encrypted,
-      [ bobId ], { armor: true, filename },
+      [ bobId ], { armor: true },
       (error, outputByteCount) => {
     if (error) {
       t.comment(errorAsString(error));
@@ -156,6 +157,49 @@ test('Encrypt a message with the armor option and decrypt it', t => {
     decrypted.setEncoding('utf8');
 
     minilock.decryptStream(bobKeyPair, encrypted, decrypted, { armor: true },
+        (error, outputByteCount, { senderId }={}) => {
+      if (error) {
+        t.comment(errorAsString(error));
+
+        t.fail('There should be no error');
+
+        t.end();
+        return;
+      }
+
+      t.ok(senderId === aliceId, 'Sender ID should be correct');
+      t.ok(decrypted.read() === message, 'Decrypted should match message');
+
+      t.end();
+    });
+  });
+});
+
+test('Encrypt a file and decrypt it', t => {
+  const filename = 'pg1661.txt';
+
+  const fileDigest = '242ec73a70f0a03dcbe007e32038e7deeaee004aaec9a09a07fa322743440fa8';
+
+  const encrypted = new BufferStream(null, null, { highWaterMark: 0x100000 });
+
+  minilock.encryptStream(aliceKeyPair,
+      fs.createReadStream(path.resolve('files', filename)), encrypted,
+      [ bobId ], { filename },
+      (error, outputByteCount) => {
+    if (error) {
+      t.comment(errorAsString(error));
+
+      t.fail('There should be no error');
+
+      t.end();
+      return;
+    }
+
+    t.ok(outputByteCount === 642355, 'Output byte count should be correct');
+
+    const decrypted = new BufferStream(null, null, { highWaterMark: 0x100000 });
+
+    minilock.decryptStream(bobKeyPair, encrypted, decrypted, {},
         (error, outputByteCount, { senderId, originalFilename }={}) => {
       if (error) {
         t.comment(errorAsString(error));
@@ -169,9 +213,18 @@ test('Encrypt a message with the armor option and decrypt it', t => {
       t.ok(senderId === aliceId, 'Sender ID should be correct');
       t.ok(originalFilename === filename,
           'Original filename should match filename');
-      t.ok(decrypted.read() === message, 'Decrypted should match message');
 
-      t.end();
+      streamHash(decrypted, 'sha256', { encoding: 'hex' }).then(digest => {
+        t.ok(digest === fileDigest, 'Digest should match file digest');
+
+        t.end();
+      }).catch(error => {
+        t.comment(errorAsString(error));
+
+        t.fail('There should be no error');
+
+        t.end();
+      });
     });
   });
 });

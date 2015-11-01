@@ -1,3 +1,4 @@
+import crypto   from 'crypto';
 import os       from 'os';
 import readline from 'readline';
 
@@ -208,6 +209,30 @@ export function prompt(label, quiet) {
 
 export function home() {
   return process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
+}
+
+export function streamHash(stream, algorithm, { encoding }={}) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash(algorithm);
+
+    if (typeof encoding === 'string') {
+      hash.setEncoding(encoding);
+    }
+
+    stream.on('error', error => {
+      hash.end();
+
+      reject(error);
+    });
+
+    stream.on('end', () => {
+      hash.end();
+
+      resolve(hash.read());
+    });
+
+    stream.pipe(hash);
+  });
 }
 
 // vim: et ts=2 sw=2
