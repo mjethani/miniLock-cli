@@ -4,7 +4,7 @@ import * as minilock from '../module';
 
 import { arrayCompare, errorAsString } from '../build/util';
 
-import { BufferReadStream, BufferWriteStream } from '../build/stream';
+import { BufferStream } from '../build/stream';
 
 const aliceEmail = 'alice@example.com';
 const alicePassphrase = 'hello';
@@ -91,9 +91,9 @@ test('Convert a secret into a key pair', t => {
 test('Encrypt a message to self and decrypt it', t => {
   const message = 'This is a secret.';
 
-  const encrypted = new BufferWriteStream();
+  const encrypted = new BufferStream();
 
-  minilock.encryptStream(aliceKeyPair, new BufferReadStream(message), encrypted,
+  minilock.encryptStream(aliceKeyPair, new BufferStream(message), encrypted,
       [], { includeSelf: true },
       (error, outputByteCount) => {
     if (error) {
@@ -107,10 +107,11 @@ test('Encrypt a message to self and decrypt it', t => {
 
     t.ok(outputByteCount === 979, 'Output byte count should be correct');
 
-    const decrypted = new BufferWriteStream();
+    const decrypted = new BufferStream();
 
-    minilock.decryptStream(aliceKeyPair,
-        new BufferReadStream(encrypted.toBuffer()), decrypted, {},
+    decrypted.setEncoding('utf8');
+
+    minilock.decryptStream(aliceKeyPair, encrypted, decrypted, {},
         (error, outputByteCount, { senderId }={}) => {
       if (error) {
         t.comment(errorAsString(error));
@@ -122,7 +123,7 @@ test('Encrypt a message to self and decrypt it', t => {
       }
 
       t.ok(senderId === aliceId, 'Sender ID should be correct');
-      t.ok(decrypted.toString() === message, 'Decrypted should match message');
+      t.ok(decrypted.read() === message, 'Decrypted should match message');
 
       t.end();
     });
@@ -134,9 +135,9 @@ test('Encrypt a message with the armor option and decrypt it', t => {
 
   const filename = 'message.txt';
 
-  const encrypted = new BufferWriteStream();
+  const encrypted = new BufferStream();
 
-  minilock.encryptStream(aliceKeyPair, new BufferReadStream(message), encrypted,
+  minilock.encryptStream(aliceKeyPair, new BufferStream(message), encrypted,
       [ bobId ], { armor: true, filename },
       (error, outputByteCount) => {
     if (error) {
@@ -150,10 +151,11 @@ test('Encrypt a message with the armor option and decrypt it', t => {
 
     t.ok(outputByteCount === 1417, 'Output byte count should be correct');
 
-    const decrypted = new BufferWriteStream();
+    const decrypted = new BufferStream();
 
-    minilock.decryptStream(bobKeyPair,
-        new BufferReadStream(encrypted.toBuffer()), decrypted, { armor: true },
+    decrypted.setEncoding('utf8');
+
+    minilock.decryptStream(bobKeyPair, encrypted, decrypted, { armor: true },
         (error, outputByteCount, { senderId, originalFilename }={}) => {
       if (error) {
         t.comment(errorAsString(error));
@@ -167,7 +169,7 @@ test('Encrypt a message with the armor option and decrypt it', t => {
       t.ok(senderId === aliceId, 'Sender ID should be correct');
       t.ok(originalFilename === filename,
           'Original filename should match filename');
-      t.ok(decrypted.toString() === message, 'Decrypted should match message');
+      t.ok(decrypted.read() === message, 'Decrypted should match message');
 
       t.end();
     });

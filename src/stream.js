@@ -3,7 +3,7 @@ import stream from 'stream';
 const buffer_ = Symbol();
 const cursor_ = Symbol();
 
-export class BufferReadStream extends stream.Readable {
+export class BufferStream extends stream.Duplex {
   constructor(source, encoding, options) {
     super(options);
 
@@ -26,14 +26,6 @@ export class BufferReadStream extends stream.Readable {
       this.push(null);
     }
   }
-}
-
-export class BufferWriteStream extends stream.Writable {
-  constructor(options) {
-    super(options);
-
-    this[buffer_] = new Buffer(0);
-  }
 
   _write(chunk, encoding, callback) {
     try {
@@ -46,14 +38,6 @@ export class BufferWriteStream extends stream.Writable {
     } catch (error) {
       callback(error);
     }
-  }
-
-  toBuffer() {
-    return new Buffer(this[buffer_]);
-  }
-
-  toString(encoding) {
-    return this[buffer_].toString(encoding);
   }
 }
 
