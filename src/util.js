@@ -4,6 +4,31 @@ import readline from 'readline';
 
 import nacl     from 'tweetnacl';
 
+export function errorAsString(error) {
+  return typeof error === 'string' ? `Error: ${error}` : error.toString();
+}
+
+export function arrayCompare(a, b) {
+  if (a === b || (a == null && b == null)) {
+    return true;
+  }
+
+  if (a == null || b == null || isNaN(a.length) || isNaN(b.length)
+      || a.length !== b.length) {
+    return false;
+  }
+
+  const n = a.length;
+
+  for (let i = 0; i < n; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function promisify(thisArg, func) {
   return (...args) => {
     return new Promise((resolve, reject) => {

@@ -6,6 +6,9 @@ watch: babel_flags += -w
 build watch:
 	babel $(babel_flags) -d build src
 
+test:
+	babel-tape-runner tests/**/*.js
+
 $(VERSION):
 	bash version.sh $(VERSION)
 
