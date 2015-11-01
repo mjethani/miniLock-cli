@@ -1,4 +1,5 @@
 import fs       from 'fs';
+import os       from 'os';
 import path     from 'path';
 
 import BLAKE2s  from 'blake2s-js';
@@ -7,7 +8,7 @@ import nacl     from 'tweetnacl';
 import nacl_    from 'nacl-stream';
 import scrypt   from 'scrypt-async';
 
-import { async, hex, temporaryFilename } from './util';
+import { async, hex } from './util';
 
 import debug from './debug';
 
@@ -83,6 +84,11 @@ export function validateId(id) {
   hash.update(bytes.slice(0, 32));
 
   return hash.digest()[0] === bytes[32];
+}
+
+function temporaryFilename() {
+  return path.resolve(os.tmpdir(),
+      '.mlck-' + hex(nacl.randomBytes(32)) + '.tmp');
 }
 
 function readableArray(array) {

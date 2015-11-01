@@ -1,8 +1,5 @@
 import os       from 'os';
-import path     from 'path';
 import readline from 'readline';
-
-import nacl     from 'tweetnacl';
 
 export function errorAsString(error) {
   return typeof error === 'string' ? `Error: ${error}` : error.toString();
@@ -207,11 +204,6 @@ export function prompt(label, quiet) {
       }
     });
   });
-}
-
-export function temporaryFilename() {
-  return path.resolve(os.tmpdir(),
-      '.mlck-' + hex(nacl.randomBytes(32)) + '.tmp');
 }
 
 export function home() {
