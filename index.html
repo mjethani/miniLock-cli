@@ -7,7 +7,7 @@
 
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/github-light.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width">
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
@@ -45,9 +45,9 @@
 
 <p>Then run the following command:</p>
 
-<div class="highlight highlight-console"><pre>$ <span class="pl-s1">npm install -g minilock-cli@0.2.9</span>
+<div class="highlight highlight-text-shell-session"><pre>$ <span class="pl-s1">npm install -g minilock-cli@0.2.10</span>
 <span class="pl-mo">/usr/local/bin/mlck -&gt; /usr/local/lib/node_modules/minilock-cli/mlck</span>
-<span class="pl-mo">minilock-cli@0.2.9 /usr/local/lib/node_modules/minilock-cli</span>
+<span class="pl-mo">minilock-cli@0.2.10 /usr/local/lib/node_modules/minilock-cli</span>
 <span class="pl-mo">├── bs58@2.0.1</span>
 <span class="pl-mo">├── nacl-stream@0.3.3</span>
 <span class="pl-mo">├── scrypt-async@1.0.1</span>
@@ -58,8 +58,8 @@ $ </pre></div>
 
 <p>Verify the installation:</p>
 
-<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck --version</span>
-<span class="pl-mo">miniLock-cli v0.2.9</span>
+<div class="highlight highlight-text-shell-session"><pre>$ <span class="pl-s1">mlck --version</span>
+<span class="pl-mo">miniLock-cli v0.2.10</span>
 $ </pre></div>
 
 <h2>
@@ -72,7 +72,7 @@ $ </pre></div>
 
 <p>First, you need a miniLock ID.</p>
 
-<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck id alice@example.com --save</span>
+<div class="highlight highlight-text-shell-session"><pre>$ <span class="pl-s1">mlck id alice@example.com --save</span>
 <span class="pl-mo">period dry million besides usually wild everybody</span>
 
 <span class="pl-mo">Passphrase (leave blank to quit): </span></pre></div>
@@ -81,7 +81,7 @@ $ </pre></div>
 
 <p>If you insist on using a simple passphrase like "hello" (not recommended at all!), you must use the <code>--passphrase</code> option.</p>
 
-<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck id alice@example.com --save --passphrase=<span class="pl-s"><span class="pl-pds">'</span>hello<span class="pl-pds">'</span></span></span>
+<div class="highlight highlight-text-shell-session"><pre>$ <span class="pl-s1">mlck id alice@example.com --save --passphrase=<span class="pl-s"><span class="pl-pds">'</span>hello<span class="pl-pds">'</span></span></span>
 
 <span class="pl-mo">Your miniLock ID: LRFbCrhCeN2uVCdDXd2bagoCM1fVcGvUzwhfVdqfyVuhi.</span>
 
@@ -89,7 +89,7 @@ $ </pre></div>
 
 <p>You can look up your miniLock ID any time.</p>
 
-<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck id</span>
+<div class="highlight highlight-text-shell-session"><pre>$ <span class="pl-s1">mlck id</span>
 
 <span class="pl-mo">Your miniLock ID: LRFbCrhCeN2uVCdDXd2bagoCM1fVcGvUzwhfVdqfyVuhi.</span>
 
@@ -111,7 +111,7 @@ Don't forget my chocolate!
 
 <p>Now you can encrypt it to the miniLock ID gT1csvpmQDNRQSMkqc1Sz7ZWYzGZkmedPKEpgqjdNTy7Y using the following command:</p>
 
-<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck encrypt -f message.txt gT1csvpmQDNRQSMkqc1Sz7ZWYzGZkmedPKEpgqjdNTy7Y</span>
+<div class="highlight highlight-text-shell-session"><pre>$ <span class="pl-s1">mlck encrypt -f message.txt gT1csvpmQDNRQSMkqc1Sz7ZWYzGZkmedPKEpgqjdNTy7Y</span>
 <span class="pl-mo">Passphrase (leave blank to quit): </span></pre></div>
 
 <p>Once again, it asks you for your passphrase. This time it's to identify you as the sender. If you wish to send anonymously (using a randomly generated sender ID), use the <code>--anonymous</code> option.</p>
@@ -120,7 +120,7 @@ Don't forget my chocolate!
 
 <p>Here's the full interaction:</p>
 
-<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck encrypt -f message.txt gT1csvpmQDNRQSMkqc1Sz7ZWYzGZkmedPKEpgqjdNTy7Y</span>
+<div class="highlight highlight-text-shell-session"><pre>$ <span class="pl-s1">mlck encrypt -f message.txt gT1csvpmQDNRQSMkqc1Sz7ZWYzGZkmedPKEpgqjdNTy7Y</span>
 <span class="pl-mo">Passphrase (leave blank to quit): </span>
 
 <span class="pl-mo">Encrypted from LRFbCrhCeN2uVCdDXd2bagoCM1fVcGvUzwhfVdqfyVuhi.</span>
@@ -136,7 +136,7 @@ $ </pre></div>
 
 <p>Your friend Bob receives a file called <code>message.txt.minilock</code> in the mail. Luckily he has miniLock-cli installed. He proceeds to decrypt the file using his email address and his passphrase.</p>
 
-<div class="highlight highlight-console"><pre>$ <span class="pl-s1">mlck decrypt -f message.txt.minilock -e bob@example.com --passphrase=<span class="pl-s"><span class="pl-pds">'</span>puff magic dragon sea frolic autumn mist lee<span class="pl-pds">'</span></span></span>
+<div class="highlight highlight-text-shell-session"><pre>$ <span class="pl-s1">mlck decrypt -f message.txt.minilock -e bob@example.com --passphrase=<span class="pl-s"><span class="pl-pds">'</span>puff magic dragon sea frolic autumn mist lee<span class="pl-pds">'</span></span></span>
 <span class="pl-mo">--- BEGIN MESSAGE ---</span>
 <span class="pl-mo">The PIN code is 1337.</span>
 
