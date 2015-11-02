@@ -1,6 +1,6 @@
 {
   "name": "minilock-cli",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "A command line version of miniLock",
   "author": {
     "name": "Manish Jethani",
@@ -30,7 +30,8 @@
     "zxcvbn": "dropbox/zxcvbn.git#063315ee6400116dacbd244f1dc98a54e0c53aec"
   },
   "devDependencies": {
-    "source-map-support": "^0.3.3"
+    "source-map-support": "^0.3.3",
+    "tape": "^4.2.2"
   },
   "bugs": {
     "url": "https://github.com/mjethani/miniLock-cli/issues",

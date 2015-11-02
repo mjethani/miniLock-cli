@@ -22,14 +22,14 @@ version: $(VERSION)
 	sort -ru .npmignore > .kbignore
 	echo .git >> .kbignore
 
-SIGNED.md sign: .kbignore
+sign: .kbignore
 	keybase dir sign -p kb
 
 verify:
-	keybase dir verify -p kb
+	keybase dir verify
 
 ifdef VERSION
-tag: SIGNED.md
+tag: sign
 	git commit -am 'Signed PGP:E6B74303'
 	git tag v$(VERSION)
 endif

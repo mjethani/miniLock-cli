@@ -150,7 +150,7 @@ test('Encrypt a message with the armor option and decrypt it', t => {
       return;
     }
 
-    t.ok(outputByteCount === 1417, 'Output byte count should be correct');
+    t.ok(outputByteCount === 1418, 'Output byte count should be correct');
 
     const decrypted = new BufferStream();
 
