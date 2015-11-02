@@ -6,9 +6,10 @@ import zxcvbn   from 'zxcvbn';
 
 import * as minilock from './minilock';
 
-import {
-  async, asyncThen, die, hex, home, logError, parseArgs, promisify, prompt
-} from './util';
+import promisify from './promisify';
+
+import { async, asyncThen, die, hex, home, logError, parseArgs, prompt }
+  from './util';
 
 import Dictionary from './dictionary';
 import Profile    from './profile';
