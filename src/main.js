@@ -19,9 +19,6 @@ import { setDebugFunc } from './debug';
 
 import version from './version';
 
-const encryptStream = promisify(null, minilock.encryptStream);
-const decryptStream = promisify(null, minilock.decryptStream);
-
 let profile = null;
 
 let dictionary = null;
@@ -183,6 +180,8 @@ function encryptFile(keyPair, file, outputFile, ids,
       ? fs.createWriteStream(outputFilename) : armor || !process.stdout.isTTY
       ? process.stdout : null;
 
+    const encryptStream = promisify(null, minilock.encryptStream);
+
     encryptStream(keyPair, inputStream, outputStream, ids, {
       filename: typeof file === 'string' ? file : null,
       armor,
@@ -215,6 +214,8 @@ function decryptFile(keyPair, file, outputFile, { armor }={}) {
 
     const outputStream = typeof outputFilename === 'string'
       ? fs.createWriteStream(outputFilename) : process.stdout;
+
+    const decryptStream = promisify(null, minilock.decryptStream);
 
     decryptStream(keyPair, inputStream, outputStream, {
       armor,
@@ -619,30 +620,43 @@ export function run() {
   switch (command) {
   case 'id':
     handleIdCommand();
+
     break;
+
   case 'encrypt':
     handleEncryptCommand();
+
     break;
+
   case 'decrypt':
     handleDecryptCommand();
+
     break;
+
   case 'help':
   case '--help':
   case '-h':
   case '-?':
     handleHelpCommand();
+
     break;
+
   case 'version':
   case '--version':
   case '-V':
     handleVersionCommand();
+
     break;
+
   case 'license':
   case '--license':
     handleLicenseCommand();
+
     break;
+
   default:
     printUsage();
+
     die();
   }
 }
