@@ -5,7 +5,7 @@ import test from 'tape';
 
 import * as minilock from '../module';
 
-import { arrayCompare, errorAsString, streamHash } from '../build/util';
+import { arrayCompare, streamHash } from '../build/util';
 
 import { BufferStream } from '../build/stream';
 
@@ -100,7 +100,7 @@ test('Encrypt a message to self and decrypt it', t => {
       [], { includeSelf: true },
       (error, outputByteCount) => {
     if (error) {
-      t.comment(errorAsString(error));
+      t.comment(`ERROR: ${error.toString()}`);
 
       t.fail('There should be no error');
 
@@ -117,7 +117,7 @@ test('Encrypt a message to self and decrypt it', t => {
     minilock.decryptStream(aliceKeyPair, encrypted, decrypted, {},
         (error, outputByteCount, { senderId }={}) => {
       if (error) {
-        t.comment(errorAsString(error));
+        t.comment(`ERROR: ${error.toString()}`);
 
         t.fail('There should be no error');
 
@@ -142,7 +142,7 @@ test('Encrypt a message with the armor option and decrypt it', t => {
       [ bobId ], { armor: true },
       (error, outputByteCount) => {
     if (error) {
-      t.comment(errorAsString(error));
+      t.comment(`ERROR: ${error.toString()}`);
 
       t.fail('There should be no error');
 
@@ -159,7 +159,7 @@ test('Encrypt a message with the armor option and decrypt it', t => {
     minilock.decryptStream(bobKeyPair, encrypted, decrypted, { armor: true },
         (error, outputByteCount, { senderId }={}) => {
       if (error) {
-        t.comment(errorAsString(error));
+        t.comment(`ERROR: ${error.toString()}`);
 
         t.fail('There should be no error');
 
@@ -187,7 +187,7 @@ test('Encrypt a file and decrypt it', t => {
       [ bobId ], { filename },
       (error, outputByteCount) => {
     if (error) {
-      t.comment(errorAsString(error));
+      t.comment(`ERROR: ${error.toString()}`);
 
       t.fail('There should be no error');
 
@@ -202,7 +202,7 @@ test('Encrypt a file and decrypt it', t => {
     minilock.decryptStream(bobKeyPair, encrypted, decrypted, {},
         (error, outputByteCount, { senderId, originalFilename }={}) => {
       if (error) {
-        t.comment(errorAsString(error));
+        t.comment(`ERROR: ${error.toString()}`);
 
         t.fail('There should be no error');
 
@@ -219,7 +219,7 @@ test('Encrypt a file and decrypt it', t => {
 
         t.end();
       }).catch(error => {
-        t.comment(errorAsString(error));
+        t.comment(`ERROR: ${error.toString()}`);
 
         t.fail('There should be no error');
 

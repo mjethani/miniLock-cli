@@ -2,10 +2,6 @@ import crypto   from 'crypto';
 import os       from 'os';
 import readline from 'readline';
 
-export function errorAsString(error) {
-  return typeof error === 'string' ? `Error: ${error}` : error.toString();
-}
-
 export function arrayCompare(a, b) {
   if (a === b || (a == null && b == null)) {
     return true;
