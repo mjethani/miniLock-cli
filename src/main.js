@@ -8,8 +8,7 @@ import * as minilock from './minilock';
 
 import promisify from './promisify';
 
-import { async, asyncThen, die, hex, home, logError, parseArgs, prompt }
-  from './util';
+import { async, die, hex, home, logError, parseArgs, prompt } from './util';
 
 import Dictionary from './dictionary';
 import Profile    from './profile';
@@ -274,7 +273,8 @@ function handleIdCommand() {
   }
 
   if (typeof email === 'string') {
-    const promise = typeof passphrase === 'string' ? asyncThen(passphrase)
+    const promise = typeof passphrase === 'string'
+      ? Promise.resolve(passphrase)
       : readPassphrase();
 
     promise.then(passphrase => {
@@ -397,8 +397,8 @@ function handleEncryptCommand() {
   const checkId = !anonymous && !keyPair && profile && email === profile.email
     && profile.id;
 
-  const promise = anonymous || keyPair ? asyncThen()
-    : typeof passphrase === 'string' ? asyncThen(passphrase)
+  const promise = anonymous || keyPair ? Promise.resolve()
+    : typeof passphrase === 'string' ? Promise.resolve(passphrase)
     : readPassphrase(0);
 
   promise.then(passphrase => {
@@ -422,7 +422,10 @@ function handleEncryptCommand() {
       return generateId(email_, passphrase_);
 
     } else {
-      return asyncThen(minilock.miniLockId(keyPair.publicKey), keyPair);
+      return Promise.resolve([
+        minilock.miniLockId(keyPair.publicKey),
+        keyPair
+      ]);
     }
 
   }).then(([ id, keyPair_ ]) => {
@@ -521,8 +524,8 @@ function handleDecryptCommand() {
 
   const checkId = !keyPair && profile && email === profile.email && profile.id;
 
-  const promise = keyPair ? asyncThen()
-    : typeof passphrase === 'string' ? asyncThen(passphrase)
+  const promise = keyPair ? Promise.resolve()
+    : typeof passphrase === 'string' ? Promise.resolve(passphrase)
     : readPassphrase(0);
 
   promise.then(passphrase => {
@@ -537,7 +540,10 @@ function handleDecryptCommand() {
       return generateId(email, passphrase);
 
     } else {
-      return asyncThen(minilock.miniLockId(keyPair.publicKey), keyPair);
+      return Promise.resolve([
+        minilock.miniLockId(keyPair.publicKey),
+        keyPair
+      ]);
     }
 
   }).then(([ id, keyPair_ ]) => {

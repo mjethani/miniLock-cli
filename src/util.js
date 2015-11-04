@@ -33,14 +33,6 @@ export function async(func, ...args) {
   });
 }
 
-export function asyncThen(...args) {
-  return new Promise(resolve => {
-    process.nextTick(() => {
-      resolve(args);
-    });
-  });
-}
-
 export function die(...rest) {
   if (rest.length > 0) {
     console.error(...rest);
