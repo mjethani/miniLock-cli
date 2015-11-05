@@ -17,8 +17,8 @@ import version from './version'
 export const ERR_PARSE_ERROR = 'Parse error'
 export const ERR_UNSUPPORTED_VERSION = 'Unsupported version'
 export const ERR_NOT_A_RECIPIENT = 'Not a recipient'
-export const ERR_MESSAGE_INTEGRITY_CHECK_FAILED
-  = 'Message integrity check failed'
+export const ERR_MESSAGE_INTEGRITY_CHECK_FAILED =
+  'Message integrity check failed'
 
 const ENCRYPTION_CHUNK_SIZE = 256
 const ARMOR_WIDTH = 64
@@ -60,8 +60,8 @@ export function keyPairFromSecret(secret) {
 }
 
 export function validateKey(key) {
-  if (!key || !(key.length >= 40 && key.length <= 50)
-      || !/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/
+  if (!key || !(key.length >= 40 && key.length <= 50) ||
+      !/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/
       .test(key)) {
     return false
   }
@@ -204,12 +204,12 @@ function extractDecryptInfo(header, secretKey) {
           nacl.util.encodeUTF8(decryptInfo.fileInfo)
           )
 
-      debug(`File key is`
-          + ` ${hex(nacl.util.decodeBase64(decryptInfo.fileInfo.fileKey))}`)
-      debug(`File nonce is`
-          + ` ${hex(nacl.util.decodeBase64(decryptInfo.fileInfo.fileNonce))}`)
-      debug(`File hash is`
-          + ` ${hex(nacl.util.decodeBase64(decryptInfo.fileInfo.fileHash))}`)
+      debug(`File key is` +
+          ` ${hex(nacl.util.decodeBase64(decryptInfo.fileInfo.fileKey))}`)
+      debug(`File nonce is` +
+          ` ${hex(nacl.util.decodeBase64(decryptInfo.fileInfo.fileNonce))}`)
+      debug(`File hash is` +
+          ` ${hex(nacl.util.decodeBase64(decryptInfo.fileInfo.fileHash))}`)
       break
     }
   }
@@ -381,17 +381,17 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
     if (armor) {
       // https://tools.ietf.org/html/rfc4880#section-6
 
-      buffer = outputHeader.slice(outputHeader.length
-            - outputHeader.length % 3)
-      outputHeader = asciiArmor(outputHeader.slice(0, outputHeader.length
-              - outputHeader.length % 3))
+      buffer = outputHeader.slice(outputHeader.length -
+            outputHeader.length % 3)
+      outputHeader = asciiArmor(outputHeader.slice(0, outputHeader.length -
+              outputHeader.length % 3))
 
       asciiIndent = outputHeader.length % (ARMOR_WIDTH + 1)
 
-      outputHeader = '-----BEGIN MINILOCK FILE-----\n'
-        + 'Version: miniLock-cli v' + version + '\n'
-        + '\n'
-        + outputHeader
+      outputHeader = '-----BEGIN MINILOCK FILE-----\n' +
+        'Version: miniLock-cli v' + version + '\n' +
+        '\n' +
+        outputHeader
     }
 
     if (outputStream) {
@@ -444,8 +444,8 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
 
       encrypted.on('end', () => {
         if (armor) {
-          const chunk = asciiArmor(buffer, asciiIndent)
-            + '\n-----END MINILOCK FILE-----\n'
+          const chunk = asciiArmor(buffer, asciiIndent) +
+            '\n-----END MINILOCK FILE-----\n'
 
           if (outputStream) {
             outputStream.write(chunk)
@@ -511,9 +511,9 @@ export function decryptStream(keyPair, inputStream, outputStream,
 
         let index = -1
 
-        if (!armorHeaders && asciiBuffer.slice(0, 30)
-            === '-----BEGIN MINILOCK FILE-----\n'
-            && (index = asciiBuffer.indexOf('\n\n')) !== -1) {
+        if (!armorHeaders && asciiBuffer.slice(0, 30) ===
+            '-----BEGIN MINILOCK FILE-----\n' &&
+            (index = asciiBuffer.indexOf('\n\n')) !== -1) {
           armorHeaders = asciiBuffer.slice(30, index).toString().split('\n')
 
           asciiBuffer = asciiBuffer.slice(index + 2)
@@ -545,14 +545,14 @@ export function decryptStream(keyPair, inputStream, outputStream,
       if (!header) {
         try {
           if (isNaN(headerLength) && buffer.length >= 12) {
-            if (buffer[0] !== 0x6d
-                || buffer[1] !== 0x69
-                || buffer[2] !== 0x6e
-                || buffer[3] !== 0x69
-                || buffer[4] !== 0x4c
-                || buffer[5] !== 0x6f
-                || buffer[6] !== 0x63
-                || buffer[7] !== 0x6b
+            if (buffer[0] !== 0x6d ||
+                buffer[1] !== 0x69 ||
+                buffer[2] !== 0x6e ||
+                buffer[3] !== 0x69 ||
+                buffer[4] !== 0x4c ||
+                buffer[5] !== 0x6f ||
+                buffer[6] !== 0x63 ||
+                buffer[7] !== 0x6b
                ) {
               throw ERR_PARSE_ERROR
             }
@@ -587,8 +587,8 @@ export function decryptStream(keyPair, inputStream, outputStream,
               }
 
               if (!(decryptInfo = extractDecryptInfo(header,
-                        keyPair.secretKey))
-                  || decryptInfo.recipientID !== toId) {
+                        keyPair.secretKey)) ||
+                  decryptInfo.recipientID !== toId) {
                 throw ERR_NOT_A_RECIPIENT
               }
 
@@ -611,8 +611,8 @@ export function decryptStream(keyPair, inputStream, outputStream,
               nacl.util.decodeBase64(decryptInfo.fileInfo.fileNonce),
               0x100000)
 
-          if (envelope && envelope.before && outputStream === process.stdout
-              && process.stdout.isTTY) {
+          if (envelope && envelope.before && outputStream === process.stdout &&
+              process.stdout.isTTY) {
             outputStream.write(envelope.before)
           }
         }
@@ -642,13 +642,13 @@ export function decryptStream(keyPair, inputStream, outputStream,
       return
     }
 
-    if (envelope && envelope.after && outputStream === process.stdout
-        && process.stdout.isTTY) {
+    if (envelope && envelope.after && outputStream === process.stdout &&
+        process.stdout.isTTY) {
       outputStream.write(envelope.after)
     }
 
-    if (nacl.util.encodeBase64(hash.digest())
-        !== decryptInfo.fileInfo.fileHash) {
+    if (nacl.util.encodeBase64(hash.digest()) !==
+        decryptInfo.fileInfo.fileHash) {
       // The 32-byte BLAKE2 hash of the ciphertext must match the value in
       // the header.
       callback(ERR_MESSAGE_INTEGRITY_CHECK_FAILED)

@@ -7,8 +7,8 @@ export function arrayCompare(a, b) {
     return true
   }
 
-  if (a == null || b == null || isNaN(a.length) || isNaN(b.length)
-      || a.length !== b.length) {
+  if (a == null || b == null || isNaN(a.length) || isNaN(b.length) ||
+      a.length !== b.length) {
     return false
   }
 
@@ -48,18 +48,18 @@ export function logError(error) {
 }
 
 export function parseArgs(args, ...rest) {
-  // This is another cool function. It parses command line arguments of two
-  // kinds: '--long-name[=<value>]' and '-n [<value>]'
-  // 
+  // This is function parses command line arguments of two kinds:
+  // '--long-name[=<value>]' and '-n [<value>]'
+  //
   // If the value is omitted, it's assumed to be a boolean true.
-  // 
+  //
   // You can pass in default values and a mapping of short names to long names
   // as the first and second arguments respectively.
 
-  const defaultOptions  = typeof rest[0] === 'object' && rest.shift()
-      || Object.create(null)
-  const shortcuts       = typeof rest[0] === 'object' && rest.shift()
-      || Object.create(null)
+  const defaultOptions  = typeof rest[0] === 'object' && rest.shift() ||
+    Object.create(null)
+  const shortcuts       = typeof rest[0] === 'object' && rest.shift() ||
+    Object.create(null)
 
   let expect = null
   let stop = false
@@ -114,9 +114,8 @@ export function parseArgs(args, ...rest) {
             return obj
           }
 
-          obj[name] = typeof defaultOptions[name] === 'boolean'
-              && eq === arg.length
-              || arg.slice(eq + 1)
+          obj[name] = typeof defaultOptions[name] === 'boolean' &&
+            eq === arg.length || arg.slice(eq + 1)
 
         } else {
           stop = true

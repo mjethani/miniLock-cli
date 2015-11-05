@@ -6,7 +6,7 @@ import zxcvbn from 'zxcvbn'
 
 import * as minilock from './minilock'
 
-import { async, die, hex, home, logError, parseArgs, prompt } from './util'
+import { die, hex, home, logError, parseArgs, prompt } from './util'
 
 import { Dictionary } from './dictionary'
 import { Profile }    from './profile'
@@ -103,7 +103,7 @@ function readPassphrase(minEntropy=100) {
         console.log()
         console.log(`Entropy: ${entropy}/${minEntropy}`)
         console.log()
-        console.log("Let's try once more ...")
+        console.log('Let\'s try once more ...')
         console.log()
 
         resolve(readPassphrase(minEntropy))
@@ -167,7 +167,7 @@ function encryptFile(keyPair, file, outputFile, ids,
     if (typeof outputFilename === 'string') {
       debug(`Writing to file ${outputFilename}`)
     } else if (!process.stdout.isTTY) {
-      debug("Writing to stdout")
+      debug('Writing to stdout')
     }
 
     if (!armor && typeof outputFilename !== 'string' && process.stdout.isTTY) {
@@ -207,7 +207,7 @@ function decryptFile(keyPair, file, outputFile, { armor }={}) {
     if (typeof outputFilename === 'string') {
       debug(`Writing to file ${outputFilename}`)
     } else if (!process.stdout.isTTY) {
-      debug("Writing to stdout")
+      debug('Writing to stdout')
     }
 
     const outputStream = typeof outputFilename === 'string'
@@ -280,8 +280,8 @@ function handleIdCommand() {
         debug(`Using passphrase ${passphrase}`)
       }
 
-      debug(`Generating key pair with email ${email}`
-          + ` and passphrase ${passphrase}`)
+      debug(`Generating key pair with email ${email}` +
+          ` and passphrase ${passphrase}`)
 
       return generateId(email, passphrase)
 
@@ -375,8 +375,8 @@ function handleEncryptCommand() {
     secret = profile && profile.secret || null
   }
 
-  let keyPair = !anonymous && typeof email !== 'string' && secret
-    && minilock.keyPairFromSecret(secret)
+  let keyPair = !anonymous && typeof email !== 'string' && secret &&
+    minilock.keyPairFromSecret(secret)
 
   if (!keyPair) {
     if (typeof email !== 'string' && profile) {
@@ -392,8 +392,8 @@ function handleEncryptCommand() {
     }
   }
 
-  const checkId = !anonymous && !keyPair && profile && email === profile.email
-    && profile.id
+  const checkId = !anonymous && !keyPair && profile &&
+    email === profile.email && profile.id
 
   const promise = anonymous || keyPair ? Promise.resolve()
     : typeof passphrase === 'string' ? Promise.resolve(passphrase)
@@ -414,8 +414,8 @@ function handleEncryptCommand() {
         passphrase_ = crypto.randomBytes(32).toString('base64')
       }
 
-      debug(`Generating key pair with email ${email_}`
-          + ` and passphrase ${passphrase_}`)
+      debug(`Generating key pair with email ${email_}` +
+          ` and passphrase ${passphrase_}`)
 
       return generateId(email_, passphrase_)
 
@@ -438,17 +438,17 @@ function handleEncryptCommand() {
       die()
     }
 
-    debug("Begin file encryption")
+    debug('Begin file encryption')
 
     return encryptFile(keyPair, file, outputFile, ids, { armor, includeSelf })
 
   }).then(([ outputByteCount, outputFilename ]) => {
-    debug("File encryption complete")
+    debug('File encryption complete')
 
     if (process.stdout.isTTY) {
       console.log()
-      console.log(`Encrypted from`
-          + ` ${minilock.miniLockId(keyPair.publicKey)}.`)
+      console.log(`Encrypted from` +
+          ` ${minilock.miniLockId(keyPair.publicKey)}.`)
       console.log()
 
       if (typeof outputFilename === 'string') {
@@ -503,8 +503,8 @@ function handleDecryptCommand() {
     secret = profile && profile.secret || null
   }
 
-  let keyPair = typeof email !== 'string' && secret
-    && minilock.keyPairFromSecret(secret)
+  let keyPair = typeof email !== 'string' && secret &&
+    minilock.keyPairFromSecret(secret)
 
   if (!keyPair) {
     if (typeof email !== 'string' && profile) {
@@ -532,8 +532,8 @@ function handleDecryptCommand() {
     }
 
     if (!keyPair) {
-      debug(`Generating key pair with email ${email}`
-          + ` and passphrase ${passphrase}`)
+      debug(`Generating key pair with email ${email}` +
+          ` and passphrase ${passphrase}`)
 
       return generateId(email, passphrase)
 
@@ -556,13 +556,13 @@ function handleDecryptCommand() {
       die()
     }
 
-    debug("Begin file decryption")
+    debug('Begin file decryption')
 
     return decryptFile(keyPair, file, outputFile, { armor })
 
   }).then(([ outputByteCount, outputFilename,
         { senderId, originalFilename }={} ]) => {
-    debug("File decryption complete")
+    debug('File decryption complete')
 
     if (process.stdout.isTTY) {
       console.log()
@@ -586,8 +586,8 @@ function handleDecryptCommand() {
     } else if (error === minilock.ERR_UNSUPPORTED_VERSION) {
       console.error('This miniLock version is not supported.')
     } else if (error === minilock.ERR_NOT_A_RECIPIENT) {
-      console.error(`The message is not intended for`
-          + ` ${minilock.miniLockId(keyPair.publicKey)}.`)
+      console.error(`The message is not intended for` +
+          ` ${minilock.miniLockId(keyPair.publicKey)}.`)
     } else if (error === minilock.ERR_MESSAGE_INTEGRITY_CHECK_FAILED) {
       console.error('The message is corrupt.')
     } else {
