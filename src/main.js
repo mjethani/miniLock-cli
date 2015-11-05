@@ -6,8 +6,6 @@ import zxcvbn from 'zxcvbn';
 
 import * as minilock from './minilock';
 
-import promisify from './promisify';
-
 import { async, die, hex, home, logError, parseArgs, prompt } from './util';
 
 import { Dictionary } from './dictionary';
@@ -180,16 +178,16 @@ function encryptFile(keyPair, file, outputFile, ids,
       ? fs.createWriteStream(outputFilename) : armor || !process.stdout.isTTY
       ? process.stdout : null;
 
-    const encryptStream = promisify(null, minilock.encryptStream);
-
-    encryptStream(keyPair, inputStream, outputStream, ids, {
+    minilock.encryptStream(keyPair, inputStream, outputStream, ids, {
       filename: typeof file === 'string' ? file : null,
       armor,
       includeSelf
-    }).then(([ outputByteCount ]) => {
-      resolve([ outputByteCount, outputFilename ]);
-    }, error => {
-      reject(error);
+    }, (error, outputByteCount) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve([ outputByteCount, outputFilename ]);
+      }
     });
   });
 }
@@ -215,19 +213,19 @@ function decryptFile(keyPair, file, outputFile, { armor }={}) {
     const outputStream = typeof outputFilename === 'string'
       ? fs.createWriteStream(outputFilename) : process.stdout;
 
-    const decryptStream = promisify(null, minilock.decryptStream);
-
-    decryptStream(keyPair, inputStream, outputStream, {
+    minilock.decryptStream(keyPair, inputStream, outputStream, {
       armor,
       envelope: {
         before: '\n--- BEGIN MESSAGE ---\n',
         after:  '\n--- END MESSAGE ---\n'
       }
-    }).then(([ outputByteCount, { senderId, originalFilename }={} ]) => {
-      resolve([ outputByteCount, outputFilename,
-            { senderId, originalFilename } ]);
-    }, error => {
-      reject(error);
+    }, (error, outputByteCount, { senderId, originalFilename }={}) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve([ outputByteCount, outputFilename,
+              { senderId, originalFilename } ]);
+      }
     });
   });
 }
