@@ -1,29 +1,29 @@
-import stream from 'stream';
+import stream from 'stream'
 
-const buffer_ = Symbol();
-const cursor_ = Symbol();
+const buffer_ = Symbol()
+const cursor_ = Symbol()
 
 export class BufferStream extends stream.Duplex {
   constructor(source, encoding, options) {
-    super(options);
+    super(options)
 
     this[buffer_] = typeof source === 'string' || source instanceof Buffer
-      ? new Buffer(source, encoding) : new Buffer(0);
+      ? new Buffer(source, encoding) : new Buffer(0)
 
-    this[cursor_] = 0;
+    this[cursor_] = 0
   }
 
   _read(size) {
-    const chunk = this[buffer_].slice(this[cursor_], size);
+    const chunk = this[buffer_].slice(this[cursor_], size)
 
     if (chunk.length > 0) {
-      this[cursor_] += chunk.length;
+      this[cursor_] += chunk.length
 
-      this.push(chunk);
+      this.push(chunk)
     }
 
     if (this[cursor_] === this[buffer_].length) {
-      this.push(null);
+      this.push(null)
     }
   }
 
@@ -32,11 +32,11 @@ export class BufferStream extends stream.Duplex {
       this[buffer_] = Buffer.concat([
         this[buffer_],
         typeof chunk === 'string' ? new Buffer(chunk, encoding) : chunk
-      ]);
+      ])
 
-      callback();
+      callback()
     } catch (error) {
-      callback(error);
+      callback(error)
     }
   }
 }

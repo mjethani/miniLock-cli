@@ -1,1 +1,1 @@
-module.exports = require('./build/minilock');
+module.exports = require('./build/minilock')

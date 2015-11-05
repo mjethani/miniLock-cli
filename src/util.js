@@ -1,49 +1,49 @@
-import crypto   from 'crypto';
-import os       from 'os';
-import readline from 'readline';
+import crypto   from 'crypto'
+import os       from 'os'
+import readline from 'readline'
 
 export function arrayCompare(a, b) {
   if (a === b || (a == null && b == null)) {
-    return true;
+    return true
   }
 
   if (a == null || b == null || isNaN(a.length) || isNaN(b.length)
       || a.length !== b.length) {
-    return false;
+    return false
   }
 
-  const n = a.length;
+  const n = a.length
 
   for (let i = 0; i < n; i++) {
     if (a[i] !== b[i]) {
-      return false;
+      return false
     }
   }
 
-  return true;
+  return true
 }
 
 export function hex(data) {
-  return new Buffer(data).toString('hex');
+  return new Buffer(data).toString('hex')
 }
 
 export function async(func, ...args) {
   process.nextTick(() => {
-    func(...args);
-  });
+    func(...args)
+  })
 }
 
 export function die(...rest) {
   if (rest.length > 0) {
-    console.error(...rest);
+    console.error(...rest)
   }
 
-  process.exit(1);
+  process.exit(1)
 }
 
 export function logError(error) {
   if (error) {
-    console.error(error.toString());
+    console.error(error.toString())
   }
 }
 
@@ -57,103 +57,103 @@ export function parseArgs(args, ...rest) {
   // as the first and second arguments respectively.
 
   const defaultOptions  = typeof rest[0] === 'object' && rest.shift()
-      || Object.create(null);
+      || Object.create(null)
   const shortcuts       = typeof rest[0] === 'object' && rest.shift()
-      || Object.create(null);
+      || Object.create(null)
 
-  let expect = null;
-  let stop = false;
+  let expect = null
+  let stop = false
 
-  let obj = Object.create(defaultOptions);
+  let obj = Object.create(defaultOptions)
 
-  obj = Object.defineProperty(obj, '...', { value: [] });
-  obj = Object.defineProperty(obj, '!?',  { value: [] });
+  obj = Object.defineProperty(obj, '...', { value: [] })
+  obj = Object.defineProperty(obj, '!?',  { value: [] })
 
   // Preprocessing.
   args = args.reduce((newArgs, arg) => {
     if (!stop) {
       if (arg === '--') {
-        stop = true;
+        stop = true
 
       // Split '-xyz' into '-x', '-y', '-z'.
       } else if (arg.length > 2 && arg[0] === '-' && arg[1] !== '-') {
-        arg = arg.slice(1).split('').map(v => '-' + v);
+        arg = arg.slice(1).split('').map(v => '-' + v)
       }
     }
 
-    return newArgs.concat(arg);
+    return newArgs.concat(arg)
   },
-  []);
+  [])
 
-  stop = false;
+  stop = false
 
   return args.reduce((obj, arg, index) => {
-    const single = !stop && arg[0] === '-' && arg[1] !== '-';
+    const single = !stop && arg[0] === '-' && arg[1] !== '-'
 
     if (!(single && !(arg = shortcuts[arg]))) {
       if (!stop && arg.slice(0, 2) === '--') {
         if (arg.length > 2) {
-          let eq = arg.indexOf('=');
+          let eq = arg.indexOf('=')
 
           if (eq === -1) {
-            eq = arg.length;
+            eq = arg.length
           }
 
-          const name = arg.slice(2, eq);
+          const name = arg.slice(2, eq)
 
           if (!single && !Object.prototype.hasOwnProperty.call(defaultOptions,
                 name)) {
-            obj['!?'].push(arg.slice(0, eq));
+            obj['!?'].push(arg.slice(0, eq))
 
-            return obj;
+            return obj
           }
 
           if (single && eq === arg.length - 1) {
-            obj[expect = name] = '';
+            obj[expect = name] = ''
 
-            return obj;
+            return obj
           }
 
           obj[name] = typeof defaultOptions[name] === 'boolean'
               && eq === arg.length
-              || arg.slice(eq + 1);
+              || arg.slice(eq + 1)
 
         } else {
-          stop = true;
+          stop = true
         }
       } else if (expect) {
-        obj[expect] = arg;
+        obj[expect] = arg
 
       } else if (rest.length > 0) {
-        obj[rest.shift()] = arg;
+        obj[rest.shift()] = arg
 
       } else {
-        obj['...'].push(arg);
+        obj['...'].push(arg)
       }
 
     } else if (single) {
-      obj['!?'].push(args[index]);
+      obj['!?'].push(args[index])
     }
 
-    expect = null;
+    expect = null
 
-    return obj;
+    return obj
   },
-  obj);
+  obj)
 }
 
 export function prompt(label, quiet) {
   return new Promise((resolve, reject) => {
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
-      throw new Error('No TTY');
+      throw new Error('No TTY')
     }
 
     if (typeof quiet !== 'boolean') {
-      quiet = false;
+      quiet = false
     }
 
     if (typeof label === 'string') {
-      process.stdout.write(label);
+      process.stdout.write(label)
     }
 
     const rl = readline.createInterface({
@@ -162,51 +162,51 @@ export function prompt(label, quiet) {
       // output so nothing is displayed.
       output: !quiet && process.stdout || null,
       terminal: true
-    });
+    })
 
     rl.on('line', line => {
       try {
-        rl.close();
+        rl.close()
 
         if (quiet) {
-          process.stdout.write(os.EOL);
+          process.stdout.write(os.EOL)
         }
 
-        resolve(line);
+        resolve(line)
 
       } catch (error) {
-        reject(error);
+        reject(error)
       }
-    });
-  });
+    })
+  })
 }
 
 export function home() {
-  return process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
+  return process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME']
 }
 
 export function streamHash(stream, algorithm, { encoding }={}) {
   return new Promise((resolve, reject) => {
-    const hash = crypto.createHash(algorithm);
+    const hash = crypto.createHash(algorithm)
 
     if (typeof encoding === 'string') {
-      hash.setEncoding(encoding);
+      hash.setEncoding(encoding)
     }
 
     stream.on('error', error => {
-      hash.end();
+      hash.end()
 
-      reject(error);
-    });
+      reject(error)
+    })
 
     stream.on('end', () => {
-      hash.end();
+      hash.end()
 
-      resolve(hash.read());
-    });
+      resolve(hash.read())
+    })
 
-    stream.pipe(hash);
-  });
+    stream.pipe(hash)
+  })
 }
 
 // vim: et ts=2 sw=2

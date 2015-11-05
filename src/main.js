@@ -1,33 +1,33 @@
-import crypto from 'crypto';
-import fs     from 'fs';
-import path   from 'path';
+import crypto from 'crypto'
+import fs     from 'fs'
+import path   from 'path'
 
-import zxcvbn from 'zxcvbn';
+import zxcvbn from 'zxcvbn'
 
-import * as minilock from './minilock';
+import * as minilock from './minilock'
 
-import { async, die, hex, home, logError, parseArgs, prompt } from './util';
+import { async, die, hex, home, logError, parseArgs, prompt } from './util'
 
-import { Dictionary } from './dictionary';
-import { Profile }    from './profile';
+import { Dictionary } from './dictionary'
+import { Profile }    from './profile'
 
-import debug from './debug';
+import debug from './debug'
 
-import { setDebugFunc } from './debug';
+import { setDebugFunc } from './debug'
 
-import version from './version';
+import version from './version'
 
-let profile = null;
+let profile = null
 
-let dictionary = null;
+let dictionary = null
 
 function loadProfile() {
   try {
     profile = Profile.loadFromFile(path.resolve(home(), '.mlck',
-          'profile.json'));
+          'profile.json'))
   } catch (error) {
     if (error instanceof SyntaxError) {
-      console.error('WARNING: Profile data is corrupt.');
+      console.error('WARNING: Profile data is corrupt.')
     }
   }
 }
@@ -35,36 +35,36 @@ function loadProfile() {
 function loadDictionary() {
   try {
     dictionary = Dictionary.loadFromFile(path.resolve(__dirname, '..',
-          'dictionary'));
+          'dictionary'))
   } catch (error) {
-    dictionary = new Dictionary();
+    dictionary = new Dictionary()
   }
 }
 
 function randomPassphrase(entropy) {
   if (!dictionary) {
-    loadDictionary();
+    loadDictionary()
   }
 
   if (dictionary.wordCount === 0) {
-    return null;
+    return null
   }
 
-  let passphrase = '';
+  let passphrase = ''
 
   while (zxcvbn(passphrase).entropy < entropy) {
     // Pick a random word from the dictionary and add it to the passphrase.
-    passphrase += (passphrase && ' ' || '') + dictionary.randomWord();
+    passphrase += (passphrase && ' ' || '') + dictionary.randomWord()
   }
 
-  return passphrase;
+  return passphrase
 }
 
 function printUsage() {
   try {
     let help = fs.readFileSync(path.resolve(__dirname, '..', 'help',
-          'default.help'), 'utf8');
-    process.stderr.write(help.split('\n\n')[0] + '\n\n');
+          'default.help'), 'utf8')
+    process.stderr.write(help.split('\n\n')[0] + '\n\n')
   } catch (error) {
   }
 }
@@ -72,10 +72,10 @@ function printUsage() {
 function printHelp(topic) {
   try {
     let help = fs.readFileSync(path.resolve(__dirname, '..', 'help',
-          `${topic || 'default'}.help`), 'utf8');
-    process.stdout.write(help);
+          `${topic || 'default'}.help`), 'utf8')
+    process.stdout.write(help)
   } catch (error) {
-    printUsage();
+    printUsage()
   }
 }
 
@@ -83,100 +83,100 @@ function readPassphrase(minEntropy=100) {
   return new Promise((resolve, reject) => {
     if (minEntropy) {
       // Display a dictionary-based random passphrase as a hint/suggestion.
-      const example = randomPassphrase(minEntropy);
+      const example = randomPassphrase(minEntropy)
 
       if (example) {
-        console.log(example);
-        console.log();
+        console.log(example)
+        console.log()
       }
     }
 
     prompt('Passphrase (leave blank to quit): ', true)
     .then(passphrase => {
       if (passphrase === '') {
-        die();
+        die()
       }
 
-      const entropy = zxcvbn(passphrase).entropy;
+      const entropy = zxcvbn(passphrase).entropy
 
       if (entropy < minEntropy) {
-        console.log();
-        console.log(`Entropy: ${entropy}/${minEntropy}`);
-        console.log();
-        console.log("Let's try once more ...");
-        console.log();
+        console.log()
+        console.log(`Entropy: ${entropy}/${minEntropy}`)
+        console.log()
+        console.log("Let's try once more ...")
+        console.log()
 
-        resolve(readPassphrase(minEntropy));
+        resolve(readPassphrase(minEntropy))
       } else {
-        resolve(passphrase);
+        resolve(passphrase)
       }
     }).catch(error => {
-      reject(error);
-    });
-  });
+      reject(error)
+    })
+  })
 }
 
 function generateId(email, passphrase) {
   return new Promise(resolve => {
     minilock.getKeyPair(passphrase, email, keyPair => {
-      resolve([ minilock.miniLockId(keyPair.publicKey), keyPair ]);
-    });
-  });
+      resolve([ minilock.miniLockId(keyPair.publicKey), keyPair ])
+    })
+  })
 }
 
 function printId(id) {
   if (process.stdout.isTTY) {
-    console.log();
-    console.log(`Your miniLock ID: ${id}.`);
-    console.log();
+    console.log()
+    console.log(`Your miniLock ID: ${id}.`)
+    console.log()
   } else {
-    console.log(id);
+    console.log(id)
   }
 }
 
 function saveId(email, id, keyPair) {
-  const data = {};
+  const data = {}
 
   if (keyPair) {
     // Store only the secret key. If it's compromised, you have to get a new
     // one. No other information is leaked.
-    data.secret = minilock.miniLockId(keyPair.secretKey);
+    data.secret = minilock.miniLockId(keyPair.secretKey)
   } else {
-    data.email = email;
-    data.id = id;
+    data.email = email
+    data.id = id
   }
 
   Profile.saveToFile(new Profile(data), path.resolve(home(), '.mlck',
-        'profile.json'));
+        'profile.json'))
 }
 
 function encryptFile(keyPair, file, outputFile, ids,
     { armor, includeSelf }={}) {
   return new Promise((resolve, reject) => {
     if (typeof file !== 'string' && process.stdin.isTTY) {
-      console.error('Reading from stdin ...');
+      console.error('Reading from stdin ...')
     }
 
     const inputStream = typeof file === 'string' ? fs.createReadStream(file)
-      : process.stdin;
+      : process.stdin
 
     const outputFilename = typeof outputFile === 'string' ? outputFile
       : typeof file === 'string' ? `${file}.minilock`
-      : null;
+      : null
 
     if (typeof outputFilename === 'string') {
-      debug(`Writing to file ${outputFilename}`);
+      debug(`Writing to file ${outputFilename}`)
     } else if (!process.stdout.isTTY) {
-      debug("Writing to stdout");
+      debug("Writing to stdout")
     }
 
     if (!armor && typeof outputFilename !== 'string' && process.stdout.isTTY) {
-      console.error('WARNING: Not writing output to terminal.');
+      console.error('WARNING: Not writing output to terminal.')
     }
 
     const outputStream = typeof outputFilename === 'string'
       ? fs.createWriteStream(outputFilename) : armor || !process.stdout.isTTY
-      ? process.stdout : null;
+      ? process.stdout : null
 
     minilock.encryptStream(keyPair, inputStream, outputStream, ids, {
       filename: typeof file === 'string' ? file : null,
@@ -184,34 +184,34 @@ function encryptFile(keyPair, file, outputFile, ids,
       includeSelf
     }, (error, outputByteCount) => {
       if (error) {
-        reject(error);
+        reject(error)
       } else {
-        resolve([ outputByteCount, outputFilename ]);
+        resolve([ outputByteCount, outputFilename ])
       }
-    });
-  });
+    })
+  })
 }
 
 function decryptFile(keyPair, file, outputFile, { armor }={}) {
   return new Promise((resolve, reject) => {
     if (typeof file !== 'string' && process.stdin.isTTY) {
-      console.error('Reading from stdin ...');
+      console.error('Reading from stdin ...')
     }
 
     const inputStream = typeof file === 'string' ? fs.createReadStream(file)
-      : process.stdin;
+      : process.stdin
 
     const outputFilename = typeof outputFile === 'string' ? outputFile
-      : null;
+      : null
 
     if (typeof outputFilename === 'string') {
-      debug(`Writing to file ${outputFilename}`);
+      debug(`Writing to file ${outputFilename}`)
     } else if (!process.stdout.isTTY) {
-      debug("Writing to stdout");
+      debug("Writing to stdout")
     }
 
     const outputStream = typeof outputFilename === 'string'
-      ? fs.createWriteStream(outputFilename) : process.stdout;
+      ? fs.createWriteStream(outputFilename) : process.stdout
 
     minilock.decryptStream(keyPair, inputStream, outputStream, {
       armor,
@@ -221,13 +221,13 @@ function decryptFile(keyPair, file, outputFile, { armor }={}) {
       }
     }, (error, outputByteCount, { senderId, originalFilename }={}) => {
       if (error) {
-        reject(error);
+        reject(error)
       } else {
         resolve([ outputByteCount, outputFilename,
-              { senderId, originalFilename } ]);
+              { senderId, originalFilename } ])
       }
-    });
-  });
+    })
+  })
 }
 
 function handleIdCommand() {
@@ -238,17 +238,17 @@ function handleIdCommand() {
     'anonymous':       false,
     'save':            false,
     'save-key':        false,
-  };
+  }
 
   const shortcuts = {
     '-e': '--email=',
     '-P': '--passphrase=',
-  };
+  }
 
-  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
+  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
 
   if (options['!?'].length > 0) {
-    die(`Unknown option '${options['!?'][0]}'.`);
+    die(`Unknown option '${options['!?'][0]}'.`)
   }
 
   let {
@@ -258,68 +258,68 @@ function handleIdCommand() {
     'anonymous':  anonymous,
     'save':       save,
     'save-key':   saveKey,
-  } = options;
+  } = options
 
   if (options['...'][0]) {
-    email = options['...'][0];
+    email = options['...'][0]
   }
 
   if (anonymous) {
     // Generate a random passphrase.
-    email = 'Anonymous';
-    passphrase = crypto.randomBytes(32).toString('base64');
+    email = 'Anonymous'
+    passphrase = crypto.randomBytes(32).toString('base64')
   }
 
   if (typeof email === 'string') {
     const promise = typeof passphrase === 'string'
       ? Promise.resolve(passphrase)
-      : readPassphrase();
+      : readPassphrase()
 
     promise.then(passphrase => {
       if (!anonymous) {
-        debug(`Using passphrase ${passphrase}`);
+        debug(`Using passphrase ${passphrase}`)
       }
 
       debug(`Generating key pair with email ${email}`
-          + ` and passphrase ${passphrase}`);
+          + ` and passphrase ${passphrase}`)
 
-      return generateId(email, passphrase);
+      return generateId(email, passphrase)
 
     }).then(([ id, keyPair ]) => {
       if (saveKey) {
-        saveId(email, id, keyPair);
+        saveId(email, id, keyPair)
       } else if (save) {
-        saveId(email, id);
+        saveId(email, id)
       }
 
-      printId(id);
+      printId(id)
 
     }).catch(error => {
-      logError(error);
+      logError(error)
 
-      die();
-    });
+      die()
+    })
 
   } else if (typeof secret === 'string') {
-    const keyPair = minilock.keyPairFromSecret(secret);
+    const keyPair = minilock.keyPairFromSecret(secret)
 
     if (saveKey) {
-      saveId(null, null, keyPair);
+      saveId(null, null, keyPair)
     }
 
-    printId(minilock.miniLockId(keyPair.publicKey));
+    printId(minilock.miniLockId(keyPair.publicKey))
 
   } else {
-    loadProfile();
+    loadProfile()
 
     if (profile && profile.id) {
-      printId(profile.id);
+      printId(profile.id)
     } else if (profile && profile.secret) {
-      const keyPair = minilock.keyPairFromSecret(profile.secret);
+      const keyPair = minilock.keyPairFromSecret(profile.secret)
 
-      printId(minilock.miniLockId(keyPair.publicKey));
+      printId(minilock.miniLockId(keyPair.publicKey))
     } else {
-      console.error('No profile data available.');
+      console.error('No profile data available.')
     }
   }
 }
@@ -334,7 +334,7 @@ function handleEncryptCommand() {
     'armor':           false,
     'self':            false,
     'anonymous':       false,
-  };
+  }
 
   const shortcuts = {
     '-e': '--email=',
@@ -342,15 +342,15 @@ function handleEncryptCommand() {
     '-f': '--file=',
     '-o': '--output-file=',
     '-a': '--armor',
-  };
-
-  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
-
-  if (options['!?'].length > 0) {
-    die(`Unknown option '${options['!?'][0]}'.`);
   }
 
-  let ids = options['...'].slice();
+  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
+
+  if (options['!?'].length > 0) {
+    die(`Unknown option '${options['!?'][0]}'.`)
+  }
+
+  let ids = options['...'].slice()
 
   let {
     'email':       email,
@@ -361,107 +361,107 @@ function handleEncryptCommand() {
     'armor':       armor,
     'self':        includeSelf,
     'anonymous':   anonymous,
-  } = options;
+  } = options
 
   for (let id of ids) {
     if (!minilock.validateId(id)) {
-      die(`${id} doesn't look like a valid miniLock ID.`);
+      die(`${id} doesn't look like a valid miniLock ID.`)
     }
   }
 
   if (typeof secret !== 'string') {
-    loadProfile();
+    loadProfile()
 
-    secret = profile && profile.secret || null;
+    secret = profile && profile.secret || null
   }
 
   let keyPair = !anonymous && typeof email !== 'string' && secret
-    && minilock.keyPairFromSecret(secret);
+    && minilock.keyPairFromSecret(secret)
 
   if (!keyPair) {
     if (typeof email !== 'string' && profile) {
-      email = profile.email;
+      email = profile.email
     }
 
     if (!anonymous && typeof email !== 'string') {
-      die('Email required.');
+      die('Email required.')
     }
 
     if (!anonymous && typeof passphrase !== 'string' && !process.stdin.isTTY) {
-      die('No passphrase given; no terminal available.');
+      die('No passphrase given; no terminal available.')
     }
   }
 
   const checkId = !anonymous && !keyPair && profile && email === profile.email
-    && profile.id;
+    && profile.id
 
   const promise = anonymous || keyPair ? Promise.resolve()
     : typeof passphrase === 'string' ? Promise.resolve(passphrase)
-    : readPassphrase(0);
+    : readPassphrase(0)
 
   promise.then(passphrase => {
     if (!anonymous && !keyPair) {
-      debug(`Using passphrase ${passphrase}`);
+      debug(`Using passphrase ${passphrase}`)
     }
 
     if (anonymous || !keyPair) {
-      let email_ = email;
-      let passphrase_ = passphrase;
+      let email_ = email
+      let passphrase_ = passphrase
 
       if (anonymous) {
         // Generate a random passphrase.
-        email_ = 'Anonymous';
-        passphrase_ = crypto.randomBytes(32).toString('base64');
+        email_ = 'Anonymous'
+        passphrase_ = crypto.randomBytes(32).toString('base64')
       }
 
       debug(`Generating key pair with email ${email_}`
-          + ` and passphrase ${passphrase_}`);
+          + ` and passphrase ${passphrase_}`)
 
-      return generateId(email_, passphrase_);
+      return generateId(email_, passphrase_)
 
     } else {
       return Promise.resolve([
         minilock.miniLockId(keyPair.publicKey),
         keyPair
-      ]);
+      ])
     }
 
   }).then(([ id, keyPair_ ]) => {
-    keyPair = keyPair_;
+    keyPair = keyPair_
 
-    debug(`Our public key is ${hex(keyPair.publicKey)}`);
-    debug(`Our secret key is ${hex(keyPair.secretKey)}`);
+    debug(`Our public key is ${hex(keyPair.publicKey)}`)
+    debug(`Our secret key is ${hex(keyPair.secretKey)}`)
 
     if (!anonymous && checkId && id !== checkId) {
-      console.error(`Incorrect passphrase for ${email}`);
+      console.error(`Incorrect passphrase for ${email}`)
 
-      die();
+      die()
     }
 
-    debug("Begin file encryption");
+    debug("Begin file encryption")
 
-    return encryptFile(keyPair, file, outputFile, ids, { armor, includeSelf });
+    return encryptFile(keyPair, file, outputFile, ids, { armor, includeSelf })
 
   }).then(([ outputByteCount, outputFilename ]) => {
-    debug("File encryption complete");
+    debug("File encryption complete")
 
     if (process.stdout.isTTY) {
-      console.log();
+      console.log()
       console.log(`Encrypted from`
-          + ` ${minilock.miniLockId(keyPair.publicKey)}.`);
-      console.log();
+          + ` ${minilock.miniLockId(keyPair.publicKey)}.`)
+      console.log()
 
       if (typeof outputFilename === 'string') {
-        console.log(`Wrote ${outputByteCount} bytes to ${outputFilename}`);
-        console.log();
+        console.log(`Wrote ${outputByteCount} bytes to ${outputFilename}`)
+        console.log()
       }
     }
 
   }).catch(error => {
-    logError(error);
+    logError(error)
 
-    die();
-  });
+    die()
+  })
 }
 
 function handleDecryptCommand() {
@@ -472,7 +472,7 @@ function handleDecryptCommand() {
     'file':            null,
     'output-file':     null,
     'armor':           false,
-  };
+  }
 
   const shortcuts = {
     '-e': '--email=',
@@ -480,12 +480,12 @@ function handleDecryptCommand() {
     '-f': '--file=',
     '-o': '--output-file=',
     '-a': '--armor',
-  };
+  }
 
-  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts);
+  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
 
   if (options['!?'].length > 0) {
-    die(`Unknown option '${options['!?'][0]}'.`);
+    die(`Unknown option '${options['!?'][0]}'.`)
   }
 
   let {
@@ -495,183 +495,183 @@ function handleDecryptCommand() {
     'file':        file,
     'output-file': outputFile,
     'armor':       armor,
-  } = options;
+  } = options
 
   if (typeof secret !== 'string') {
-    loadProfile();
+    loadProfile()
 
-    secret = profile && profile.secret || null;
+    secret = profile && profile.secret || null
   }
 
   let keyPair = typeof email !== 'string' && secret
-    && minilock.keyPairFromSecret(secret);
+    && minilock.keyPairFromSecret(secret)
 
   if (!keyPair) {
     if (typeof email !== 'string' && profile) {
-      email = profile.email;
+      email = profile.email
     }
 
     if (typeof email !== 'string') {
-      die('Email required.');
+      die('Email required.')
     }
 
     if (typeof passphrase !== 'string' && !process.stdin.isTTY) {
-      die('No passphrase given; no terminal available.');
+      die('No passphrase given; no terminal available.')
     }
   }
 
-  const checkId = !keyPair && profile && email === profile.email && profile.id;
+  const checkId = !keyPair && profile && email === profile.email && profile.id
 
   const promise = keyPair ? Promise.resolve()
     : typeof passphrase === 'string' ? Promise.resolve(passphrase)
-    : readPassphrase(0);
+    : readPassphrase(0)
 
   promise.then(passphrase => {
     if (!keyPair) {
-      debug(`Using passphrase ${passphrase}`);
+      debug(`Using passphrase ${passphrase}`)
     }
 
     if (!keyPair) {
       debug(`Generating key pair with email ${email}`
-          + ` and passphrase ${passphrase}`);
+          + ` and passphrase ${passphrase}`)
 
-      return generateId(email, passphrase);
+      return generateId(email, passphrase)
 
     } else {
       return Promise.resolve([
         minilock.miniLockId(keyPair.publicKey),
         keyPair
-      ]);
+      ])
     }
 
   }).then(([ id, keyPair_ ]) => {
-    keyPair = keyPair_;
+    keyPair = keyPair_
 
-    debug(`Our public key is ${hex(keyPair.publicKey)}`);
-    debug(`Our secret key is ${hex(keyPair.secretKey)}`);
+    debug(`Our public key is ${hex(keyPair.publicKey)}`)
+    debug(`Our secret key is ${hex(keyPair.secretKey)}`)
 
     if (checkId && id !== checkId) {
-      console.error(`Incorrect passphrase for ${email}`);
+      console.error(`Incorrect passphrase for ${email}`)
 
-      die();
+      die()
     }
 
-    debug("Begin file decryption");
+    debug("Begin file decryption")
 
-    return decryptFile(keyPair, file, outputFile, { armor });
+    return decryptFile(keyPair, file, outputFile, { armor })
 
   }).then(([ outputByteCount, outputFilename,
         { senderId, originalFilename }={} ]) => {
-    debug("File decryption complete");
+    debug("File decryption complete")
 
     if (process.stdout.isTTY) {
-      console.log();
-      console.log(`Message from ${senderId}.`);
-      console.log();
+      console.log()
+      console.log(`Message from ${senderId}.`)
+      console.log()
 
       if (originalFilename) {
-        console.log(`Original filename: ${originalFilename}`);
-        console.log();
+        console.log(`Original filename: ${originalFilename}`)
+        console.log()
       }
 
       if (typeof outputFilename === 'string') {
-        console.log(`Wrote ${outputByteCount} bytes to ${outputFilename}`);
-        console.log();
+        console.log(`Wrote ${outputByteCount} bytes to ${outputFilename}`)
+        console.log()
       }
     }
 
   }).catch(error => {
     if (error === minilock.ERR_PARSE_ERROR) {
-      console.error('The file appears corrupt.');
+      console.error('The file appears corrupt.')
     } else if (error === minilock.ERR_UNSUPPORTED_VERSION) {
-      console.error('This miniLock version is not supported.');
+      console.error('This miniLock version is not supported.')
     } else if (error === minilock.ERR_NOT_A_RECIPIENT) {
       console.error(`The message is not intended for`
-          + ` ${minilock.miniLockId(keyPair.publicKey)}.`);
+          + ` ${minilock.miniLockId(keyPair.publicKey)}.`)
     } else if (error === minilock.ERR_MESSAGE_INTEGRITY_CHECK_FAILED) {
-      console.error('The message is corrupt.');
+      console.error('The message is corrupt.')
     } else {
-      logError(error);
+      logError(error)
     }
 
-    die();
-  });
+    die()
+  })
 }
 
 function handleHelpCommand() {
-  printHelp(process.argv[2] === 'help' && process.argv[3]);
+  printHelp(process.argv[2] === 'help' && process.argv[3])
 }
 
 function handleVersionCommand() {
-  console.log(`miniLock-cli v${version}`);
+  console.log(`miniLock-cli v${version}`)
 }
 
 function handleLicenseCommand() {
   process.stdout.write(fs.readFileSync(path.resolve(__dirname, '..',
-          'LICENSE')));
+          'LICENSE')))
 }
 
 export function run() {
   if (process.argv[2] === '--debug') {
-    process.argv.splice(2, 1);
+    process.argv.splice(2, 1)
 
     setDebugFunc((...rest) => {
-      console.error(...rest);
-    });
+      console.error(...rest)
+    })
   }
 
-  const command = process.argv[2];
+  const command = process.argv[2]
 
   switch (command) {
   case 'id':
-    handleIdCommand();
+    handleIdCommand()
 
-    break;
+    break
 
   case 'encrypt':
-    handleEncryptCommand();
+    handleEncryptCommand()
 
-    break;
+    break
 
   case 'decrypt':
-    handleDecryptCommand();
+    handleDecryptCommand()
 
-    break;
+    break
 
   case 'help':
   case '--help':
   case '-h':
   case '-?':
-    handleHelpCommand();
+    handleHelpCommand()
 
-    break;
+    break
 
   case 'version':
   case '--version':
   case '-V':
-    handleVersionCommand();
+    handleVersionCommand()
 
-    break;
+    break
 
   case 'license':
   case '--license':
-    handleLicenseCommand();
+    handleLicenseCommand()
 
-    break;
+    break
 
   default:
-    printUsage();
+    printUsage()
 
-    die();
+    die()
   }
 }
 
 function main() {
-  run();
+  run()
 }
 
 if (require.main === module) {
-  main();
+  main()
 }
 
 // vim: et ts=2 sw=2
