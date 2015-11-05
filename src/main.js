@@ -1,8 +1,8 @@
-import crypto   from 'crypto';
-import fs       from 'fs';
-import path     from 'path';
+import crypto from 'crypto';
+import fs     from 'fs';
+import path   from 'path';
 
-import zxcvbn   from 'zxcvbn';
+import zxcvbn from 'zxcvbn';
 
 import * as minilock from './minilock';
 
@@ -10,8 +10,8 @@ import promisify from './promisify';
 
 import { async, die, hex, home, logError, parseArgs, prompt } from './util';
 
-import Dictionary from './dictionary';
-import Profile    from './profile';
+import { Dictionary } from './dictionary';
+import { Profile }    from './profile';
 
 import debug from './debug';
 

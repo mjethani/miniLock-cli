@@ -1,12 +1,12 @@
-import fs       from 'fs';
-import os       from 'os';
-import path     from 'path';
+import fs      from 'fs';
+import os      from 'os';
+import path    from 'path';
 
-import BLAKE2s  from 'blake2s-js';
-import Base58   from 'bs58';
-import nacl     from 'tweetnacl';
-import nacl_    from 'nacl-stream';
-import scrypt   from 'scrypt-async';
+import BLAKE2s from 'blake2s-js';
+import Base58  from 'bs58';
+import nacl    from 'tweetnacl';
+import nacl_   from 'nacl-stream';
+import scrypt  from 'scrypt-async';
 
 import { async, hex } from './util';
 
