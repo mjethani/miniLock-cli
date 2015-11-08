@@ -3,11 +3,11 @@ import path from 'path'
 
 import test from 'tape'
 
+import BufferStream from 'node-bufferstream'
+
 import * as minilock from '../module'
 
 import { arrayCompare, streamHash } from '../build/util'
-
-import { BufferStream } from '../build/stream'
 
 const aliceEmail = 'alice@example.com'
 const alicePassphrase = 'hello'
