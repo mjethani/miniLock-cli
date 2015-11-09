@@ -15,9 +15,9 @@ Install [Node.js](https://nodejs.org/).
 Then run the following command:
 
 ```console
-$ npm install -g minilock-cli@0.2.10
+$ npm install -g minilock-cli@0.2.12
 /usr/local/bin/mlck -> /usr/local/lib/node_modules/minilock-cli/mlck
-minilock-cli@0.2.10 /usr/local/lib/node_modules/minilock-cli
+minilock-cli@0.2.12 /usr/local/lib/node_modules/minilock-cli
 ├── bs58@2.0.1
 ├── nacl-stream@0.3.3
 ├── scrypt-async@1.0.1
@@ -31,7 +31,7 @@ Verify the installation:
 
 ```console
 $ mlck --version
-miniLock-cli v0.2.10
+miniLock-cli v0.2.12
 $ 
 ```
 
