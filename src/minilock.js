@@ -292,10 +292,6 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
       ENCRYPTION_CHUNK_SIZE)
   const hash = new BLAKE2s(32)
 
-  // Generate a random filename for writing encrypted chunks to instead of
-  // keeping everything in memory.
-  const encryptedDataFile = temporaryFilename()
-
   // This is where the encrypted chunks go.
   let encrypted = []
 
@@ -305,6 +301,8 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
     filenameBuffer.write(path.basename(filename))
   }
 
+  let encryptedDataFile = null
+
   // The first chunk is the 256-byte null-padded filename. If input is stdin,
   // filename is blank. If the UTF-8-encoded filename is greater than 256
   // bytes, it is truncated.
@@ -313,7 +311,9 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
   let inputByteCount = 0
 
   inputStream.on('error', error => {
-    fs.unlink(encryptedDataFile, () => {})
+    if (encryptedDataFile) {
+      fs.unlink(encryptedDataFile, () => {})
+    }
 
     callback(error)
   })
@@ -327,6 +327,10 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
       // writing to an array to writing to a file. This way we can do
       // extremely large files.
       if (inputByteCount > 4 * 1024 && Array.isArray(encrypted)) {
+        // Generate a random filename for writing encrypted chunks to instead of
+        // keeping everything in memory.
+        encryptedDataFile = temporaryFilename()
+
         const stream = fs.createWriteStream(encryptedDataFile)
 
         for (let chunk of encrypted) {
@@ -414,7 +418,9 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
 
       encrypted.on('error', error => {
         async(() => {
-          fs.unlink(encryptedDataFile, () => {})
+          if (encryptedDataFile) {
+            fs.unlink(encryptedDataFile, () => {})
+          }
 
           callback(error)
         })
@@ -455,8 +461,10 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
         }
 
         async(() => {
-          // Attempt to delete the temporary file, but ignore any error.
-          fs.unlink(encryptedDataFile, () => {})
+          if (encryptedDataFile) {
+            // Attempt to delete the temporary file, but ignore any error.
+            fs.unlink(encryptedDataFile, () => {})
+          }
 
           callback(null, outputByteCount)
         })
