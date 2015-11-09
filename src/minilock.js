@@ -8,7 +8,7 @@ import nacl    from 'tweetnacl'
 import nacl_   from 'nacl-stream'
 import scrypt  from 'scrypt-async'
 
-import { async, hex } from './util'
+import { async, hex, isBrowser } from './util'
 
 import debug from './debug'
 
@@ -273,6 +273,8 @@ function decryptChunk(chunk, decryptor, output, hash) {
 
 export function encryptStream(keyPair, inputStream, outputStream, ids,
     { filename, armor, includeSelf }={}, callback) {
+  const browser = isBrowser()
+
   const fromId = miniLockId(keyPair.publicKey)
 
   debug(`Our miniLock ID is ${fromId}`)
@@ -326,7 +328,7 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
       // If input exceeds the 4K threshold (picked arbitrarily), switch from
       // writing to an array to writing to a file. This way we can do
       // extremely large files.
-      if (inputByteCount > 4 * 1024 && Array.isArray(encrypted)) {
+      if (!browser && inputByteCount > 4 * 1024 && Array.isArray(encrypted)) {
         // Generate a random filename for writing encrypted chunks to instead of
         // keeping everything in memory.
         encryptedDataFile = temporaryFilename()
@@ -475,6 +477,8 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
 
 export function decryptStream(keyPair, inputStream, outputStream,
     { armor, envelope }={}, callback) {
+  const browser = isBrowser()
+
   const toId = miniLockId(keyPair.publicKey)
 
   debug(`Our miniLock ID is ${toId}`)
@@ -619,8 +623,8 @@ export function decryptStream(keyPair, inputStream, outputStream,
               nacl.util.decodeBase64(decryptInfo.fileInfo.fileNonce),
               0x100000)
 
-          if (envelope && envelope.before && outputStream === process.stdout &&
-              process.stdout.isTTY) {
+          if (!browser && envelope && envelope.before &&
+              outputStream === process.stdout && process.stdout.isTTY) {
             outputStream.write(envelope.before)
           }
         }
@@ -650,8 +654,8 @@ export function decryptStream(keyPair, inputStream, outputStream,
       return
     }
 
-    if (envelope && envelope.after && outputStream === process.stdout &&
-        process.stdout.isTTY) {
+    if (!browser && envelope && envelope.after &&
+        outputStream === process.stdout && process.stdout.isTTY) {
       outputStream.write(envelope.after)
     }
 

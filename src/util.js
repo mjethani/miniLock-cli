@@ -23,6 +23,10 @@ export function arrayCompare(a, b) {
   return true
 }
 
+export function isBrowser() {
+  return typeof window !== 'undefined'
+}
+
 export function hex(data) {
   return new Buffer(data).toString('hex')
 }
