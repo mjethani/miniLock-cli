@@ -179,7 +179,7 @@ function encryptFile(keyPair, file, outputFile, ids,
       ? process.stdout : null
 
     minilock.encryptStream(keyPair, inputStream, outputStream, ids, {
-      filename: typeof file === 'string' ? file : null,
+      filename: typeof file === 'string' ? path.basename(file) : null,
       armor,
       includeSelf
     }, (error, outputByteCount) => {

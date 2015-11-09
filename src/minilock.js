@@ -298,7 +298,7 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
   const filenameBuffer = new Buffer(256).fill(0)
 
   if (typeof filename === 'string') {
-    filenameBuffer.write(path.basename(filename))
+    filenameBuffer.write(filename)
   }
 
   let encryptedDataFile = null
