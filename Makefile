@@ -10,7 +10,7 @@ test:
 	babel-tape-runner tests/**/*.js
 
 $(VERSION):
-	bash version.sh $(VERSION)
+	npm version $(VERSION) --no-git-tag-version
 
 version: $(VERSION)
 
@@ -29,7 +29,7 @@ verify:
 	keybase dir verify
 
 ifdef VERSION
-tag: sign
+tag: version sign
 	git commit -am 'Signed PGP:E6B74303'
 	git tag v$(VERSION)
 endif
