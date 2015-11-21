@@ -52,7 +52,7 @@ export function logError(error) {
 }
 
 export function parseArgs(args, ...rest) {
-  // This is function parses command line arguments of two kinds:
+  // This function parses command line arguments of two kinds:
   // '--long-name[=<value>]' and '-n [<value>]'
   //
   // If the value is omitted, it's assumed to be a boolean true.
