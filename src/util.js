@@ -2,6 +2,57 @@ import crypto   from 'crypto'
 import os       from 'os'
 import readline from 'readline'
 
+export function sortBy(array, prop) {
+  return array.sort((a, b) => -(a[prop] < b[prop]) || +(a[prop] > b[prop]))
+}
+
+export function stringDistance(s, t) {
+  const a = new Array(t.length + 1)
+  for (let x = 0; x < a.length; x++) {
+    a[x] = x
+  }
+
+  for (let j = 1; j <= s.length; j++) {
+    let p = a[0]++
+    for (let k = 1; k <= t.length; k++) {
+      const o = a[k]
+      if (s[j - 1] === t[k - 1]) {
+        a[k] = p
+      } else {
+        a[k] = Math.min(a[k - 1] + 1, a[k] + 1, p + 1)
+      }
+      p = o
+    }
+  }
+
+  return a[t.length]
+}
+
+export function findCloseMatches(string, candidateList,
+    { distanceThreshold=1 }={}) {
+  const matches = candidateList.map(candidate => {
+    // Split candidate into individual components. e.g. 'output-file' becomes a
+    // list containing 'output', 'file', and 'output-file'.
+    const candidateWords = candidate.split('-')
+    if (candidateWords.length > 1) {
+      candidateWords.push(candidate)
+    }
+
+    const distance = candidateWords.reduce((distance, word) =>
+      // Take the lowest distance.
+      Math.min(distance, stringDistance(string, word))
+    ,
+    Infinity)
+
+    return { candidate, distance }
+
+  }).filter(match => match.distance <= distanceThreshold)
+
+  sortBy(matches, 'distance')
+
+  return matches.map(match => match.candidate)
+}
+
 export function arrayCompare(a, b) {
   if (a === b || (a == null && b == null)) {
     return true

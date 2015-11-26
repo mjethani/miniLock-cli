@@ -6,7 +6,8 @@ import zxcvbn from 'zxcvbn'
 
 import * as minilock from './minilock'
 
-import { die, hex, home, logError, parseArgs, prompt } from './util'
+import { die, findCloseMatches, hex, home, logError, parseArgs, prompt }
+  from './util'
 
 import { Dictionary } from './dictionary'
 import { Profile }    from './profile'
@@ -58,6 +59,22 @@ function randomPassphrase(entropy) {
   }
 
   return passphrase
+}
+
+function printClosestMatches(string, candidateList) {
+  const closeMatches = findCloseMatches(string, candidateList, {
+    distanceThreshold: 2
+  })
+
+  if (closeMatches.length > 1) {
+    console.error('Did you mean one of these?')
+  } else if (closeMatches.length === 1) {
+    console.error('Did you mean this?')
+  }
+
+  for (let match of closeMatches) {
+    console.error('\t' + match)
+  }
 }
 
 function printUsage() {
@@ -611,6 +628,28 @@ function handleLicenseCommand() {
           'LICENSE')))
 }
 
+function handleUnknownCommand(command) {
+  if (command) {
+    console.error(`Unknown command '${command}'.\n\nSee 'mlck --help'.\n`)
+
+    if (command[0] !== '-') {
+      // Find and display close matches using Levenshtein distance.
+      printClosestMatches(command, [
+        'id',
+        'encrypt',
+        'decrypt',
+        'help',
+        'version',
+        'license',
+      ])
+    }
+  } else {
+    printUsage()
+  }
+
+  die()
+}
+
 export function run() {
   if (process.argv[2] === '--debug') {
     process.argv.splice(2, 1)
@@ -660,9 +699,7 @@ export function run() {
     break
 
   default:
-    printUsage()
-
-    die()
+    handleUnknownCommand(command)
   }
 }
 
