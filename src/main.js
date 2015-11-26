@@ -247,12 +247,12 @@ function decryptFile(keyPair, file, outputFile, { armor }={}) {
   })
 }
 
-function handleUnknownOption(option, defaultOptions) {
+function handleUnknownOption(option, knownOptions) {
   console.error(`Unknown option '${option}'.\n\nSee 'mlck --help'.\n`)
 
   if (option.slice(0, 2) === '--') {
     // Find and display close matches using Levenshtein distance.
-    printClosestMatches(option.slice(2), Object.keys(defaultOptions))
+    printClosestMatches(option.slice(2), knownOptions)
   }
 
   die()
@@ -276,7 +276,7 @@ function handleIdCommand() {
   const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
 
   if (options['!?'].length > 0) {
-    handleUnknownOption(options['!?'][0], defaultOptions)
+    handleUnknownOption(options['!?'][0], Object.keys(defaultOptions))
   }
 
   let {
@@ -375,7 +375,7 @@ function handleEncryptCommand() {
   const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
 
   if (options['!?'].length > 0) {
-    handleUnknownOption(options['!?'][0], defaultOptions)
+    handleUnknownOption(options['!?'][0], Object.keys(defaultOptions))
   }
 
   let ids = options['...'].slice()
@@ -513,7 +513,7 @@ function handleDecryptCommand() {
   const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
 
   if (options['!?'].length > 0) {
-    handleUnknownOption(options['!?'][0], defaultOptions)
+    handleUnknownOption(options['!?'][0], Object.keys(defaultOptions))
   }
 
   let {
@@ -639,19 +639,12 @@ function handleLicenseCommand() {
           'LICENSE')))
 }
 
-function handleUnknownCommand(command) {
+function handleUnknownCommand(command, knownCommands) {
   if (command) {
     console.error(`Unknown command '${command}'.\n\nSee 'mlck --help'.\n`)
 
     // Find and display close matches using Levenshtein distance.
-    printClosestMatches(command, [
-      'id',
-      'encrypt',
-      'decrypt',
-      'help',
-      'version',
-      'license',
-    ])
+    printClosestMatches(command, knownCommands)
   } else {
     printUsage()
   }
@@ -684,7 +677,7 @@ export function run() {
     shortcuts)
 
   if (options['!?'].length > 0) {
-    handleUnknownOption(options['!?'][0], defaultOptions)
+    handleUnknownOption(options['!?'][0], Object.keys(defaultOptions))
   }
 
   let {
@@ -743,7 +736,14 @@ export function run() {
     break
 
   default:
-    handleUnknownCommand(command)
+    handleUnknownCommand(command, [
+      'id',
+      'encrypt',
+      'decrypt',
+      'help',
+      'version',
+      'license',
+    ])
   }
 }
 
