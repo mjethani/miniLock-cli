@@ -33,11 +33,19 @@ ifdef VERSION
 tag: version sign
 	git commit -am 'Signed PGP:E6B74303'
 	git tag v$(VERSION)
+
+publish:
+	git checkout master
+	git merge develop
+	touch .gitignore
+	make tag VERSION=$(VERSION)
+	make
+	npm publish
 endif
 
 clean:
 	rm -rf build
 	git checkout SIGNED.md
 
-.PHONY: clean version build watch sign verify tag
+.PHONY: clean version build watch sign verify tag publish
 
