@@ -247,6 +247,16 @@ function decryptFile(keyPair, file, outputFile, { armor }={}) {
   })
 }
 
+function handleUnknownOption(option, defaultOptions) {
+  console.error(`Unknown option '${option}'.\n\nSee 'mlck --help'.\n`)
+
+  if (option.slice(0, 2) === '--') {
+    printClosestMatches(option.slice(2), Object.keys(defaultOptions))
+  }
+
+  die()
+}
+
 function handleIdCommand() {
   const defaultOptions = {
     'email':           null,
@@ -265,7 +275,7 @@ function handleIdCommand() {
   const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
 
   if (options['!?'].length > 0) {
-    die(`Unknown option '${options['!?'][0]}'.`)
+    handleUnknownOption(options['!?'][0], defaultOptions)
   }
 
   let {
@@ -364,7 +374,7 @@ function handleEncryptCommand() {
   const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
 
   if (options['!?'].length > 0) {
-    die(`Unknown option '${options['!?'][0]}'.`)
+    handleUnknownOption(options['!?'][0], defaultOptions)
   }
 
   let ids = options['...'].slice()
@@ -502,7 +512,7 @@ function handleDecryptCommand() {
   const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
 
   if (options['!?'].length > 0) {
-    die(`Unknown option '${options['!?'][0]}'.`)
+    handleUnknownOption(options['!?'][0], defaultOptions)
   }
 
   let {
