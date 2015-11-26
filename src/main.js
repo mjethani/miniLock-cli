@@ -251,6 +251,7 @@ function handleUnknownOption(option, defaultOptions) {
   console.error(`Unknown option '${option}'.\n\nSee 'mlck --help'.\n`)
 
   if (option.slice(0, 2) === '--') {
+    // Find and display close matches using Levenshtein distance.
     printClosestMatches(option.slice(2), Object.keys(defaultOptions))
   }
 
@@ -640,19 +641,38 @@ function handleLicenseCommand() {
 
 function handleUnknownCommand(command) {
   if (command) {
+    if (command[0] === '-') {
+      // Treat command as an option.
+      const defaultOptions = {
+        'help':    false,
+        'version': false,
+        'license': false,
+      }
+
+      const shortcuts = {
+        '-h': '--help',
+        '-?': '--help',
+        '-V': '--version',
+      }
+
+      const options = parseArgs([ command ], defaultOptions, shortcuts)
+
+      if (options['!?'].length > 0) {
+        handleUnknownOption(options['!?'][0], defaultOptions)
+      }
+    }
+
     console.error(`Unknown command '${command}'.\n\nSee 'mlck --help'.\n`)
 
-    if (command[0] !== '-') {
-      // Find and display close matches using Levenshtein distance.
-      printClosestMatches(command, [
-        'id',
-        'encrypt',
-        'decrypt',
-        'help',
-        'version',
-        'license',
-      ])
-    }
+    // Find and display close matches using Levenshtein distance.
+    printClosestMatches(command, [
+      'id',
+      'encrypt',
+      'decrypt',
+      'help',
+      'version',
+      'license',
+    ])
   } else {
     printUsage()
   }
