@@ -21,6 +21,7 @@ version: $(VERSION)
 .kbignore: .npmignore
 	sort -ru .npmignore > .kbignore
 	echo .git >> .kbignore
+	echo build >> .kbignore
 
 sign: .kbignore
 	keybase dir sign -p kb
