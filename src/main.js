@@ -641,27 +641,6 @@ function handleLicenseCommand() {
 
 function handleUnknownCommand(command) {
   if (command) {
-    if (command[0] === '-') {
-      // Treat command as an option.
-      const defaultOptions = {
-        'help':    false,
-        'version': false,
-        'license': false,
-      }
-
-      const shortcuts = {
-        '-h': '--help',
-        '-?': '--help',
-        '-V': '--version',
-      }
-
-      const options = parseArgs([ command ], defaultOptions, shortcuts)
-
-      if (options['!?'].length > 0) {
-        handleUnknownOption(options['!?'][0], defaultOptions)
-      }
-    }
-
     console.error(`Unknown command '${command}'.\n\nSee 'mlck --help'.\n`)
 
     // Find and display close matches using Levenshtein distance.
@@ -689,6 +668,47 @@ export function run() {
     })
   }
 
+  const defaultOptions = {
+    'help':    false,
+    'version': false,
+    'license': false,
+  }
+
+  const shortcuts = {
+    '-h': '--help',
+    '-?': '--help',
+    '-V': '--version',
+  }
+
+  const options = parseArgs([ process.argv[2] || '' ], defaultOptions,
+    shortcuts)
+
+  if (options['!?'].length > 0) {
+    handleUnknownOption(options['!?'][0], defaultOptions)
+  }
+
+  let {
+    'help':    help,
+    'version': version,
+    'license': license,
+  } = options
+
+  if (help) {
+    handleHelpCommand()
+
+    return
+
+  } else if (version) {
+    handleVersionCommand()
+
+    return
+
+  } else if (license) {
+    handleLicenseCommand()
+
+    return
+  }
+
   const command = process.argv[2]
 
   switch (command) {
@@ -708,22 +728,16 @@ export function run() {
     break
 
   case 'help':
-  case '--help':
-  case '-h':
-  case '-?':
     handleHelpCommand()
 
     break
 
   case 'version':
-  case '--version':
-  case '-V':
     handleVersionCommand()
 
     break
 
   case 'license':
-  case '--license':
     handleLicenseCommand()
 
     break
