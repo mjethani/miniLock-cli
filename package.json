@@ -8,7 +8,6 @@
     "url": "http://manishjethani.com/"
   },
   "homepage": "http://mjethani.github.io/miniLock-cli",
-  "main": "main.js",
   "bin": {
     "mlck": "./mlck"
   },
@@ -36,7 +35,7 @@
   },
   "bugs": {
     "url": "https://github.com/mjethani/miniLock-cli/issues",
-    "email": "manish.jethani+minilock@gmail.com"
+    "email": "manish.jethani@gmail.com"
   },
   "license": "ISC"
 }
