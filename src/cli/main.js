@@ -4,19 +4,19 @@ import path   from 'path'
 
 import zxcvbn from 'zxcvbn'
 
-import * as minilock from './minilock'
+import * as minilock from '../module'
 
 import { die, findCloseMatches, hex, home, logError, parseArgs, prompt }
-  from './util'
+  from '../common/util'
 
 import { Dictionary } from './dictionary'
 import { Profile }    from './profile'
 
-import debug from './debug'
+import debug from '../common/debug'
 
-import { setDebugFunc } from './debug'
+import { setDebugFunc } from '../common/debug'
 
-import version from './version'
+import version from '../common/version'
 
 let profile = null
 
@@ -35,7 +35,7 @@ function loadProfile() {
 
 function loadDictionary() {
   try {
-    dictionary = Dictionary.loadFromFile(path.resolve(__dirname, '..',
+    dictionary = Dictionary.loadFromFile(path.resolve(__dirname, '..', '..',
           'dictionary'))
   } catch (error) {
     dictionary = new Dictionary()
@@ -79,7 +79,7 @@ function printClosestMatches(string, candidateList) {
 
 function printUsage() {
   try {
-    let help = fs.readFileSync(path.resolve(__dirname, '..', 'help',
+    let help = fs.readFileSync(path.resolve(__dirname, '..', '..', 'help',
           'default.help'), 'utf8')
     process.stderr.write(help.split('\n\n')[0] + '\n\n')
   } catch (error) {
@@ -88,7 +88,7 @@ function printUsage() {
 
 function printHelp(topic) {
   try {
-    let help = fs.readFileSync(path.resolve(__dirname, '..', 'help',
+    let help = fs.readFileSync(path.resolve(__dirname, '..', '..', 'help',
           `${topic || 'default'}.help`), 'utf8')
     process.stdout.write(help)
   } catch (error) {
@@ -635,7 +635,7 @@ function handleVersionCommand() {
 }
 
 function handleLicenseCommand() {
-  process.stdout.write(fs.readFileSync(path.resolve(__dirname, '..',
+  process.stdout.write(fs.readFileSync(path.resolve(__dirname, '..', '..',
           'LICENSE')))
 }
 

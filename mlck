@@ -1,4 +1,5 @@
 #!/usr/bin/env node
 
-require('./build/main').run();
+require('./build/cli/main').run()
 
+// vim: et ts=2 sw=2

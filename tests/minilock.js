@@ -7,7 +7,7 @@ import BufferStream from 'node-bufferstream'
 
 import * as minilock from '../module'
 
-import { arrayCompare, streamHash } from '../build/util'
+import { arrayCompare, streamHash } from '../build/common/util'
 
 const aliceEmail = 'alice@example.com'
 const alicePassphrase = 'hello'

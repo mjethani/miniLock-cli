@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-require('source-map-support').install();
+require('source-map-support').install()
 
-require('./build/main').run();
+require('./build/cli/main').run()
 
+// vim: et ts=2 sw=2

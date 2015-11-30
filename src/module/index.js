@@ -8,11 +8,11 @@ import nacl    from 'tweetnacl'
 import nacl_   from 'nacl-stream'
 import scrypt  from 'scrypt-async'
 
-import { async, hex, isBrowser } from './util'
+import { async, hex, isBrowser } from '../common/util'
 
-import debug from './debug'
+import debug from '../common/debug'
 
-import version from './version'
+import version from '../common/version'
 
 export const ERR_PARSE_ERROR = 'Parse error'
 export const ERR_UNSUPPORTED_VERSION = 'Unsupported version'
