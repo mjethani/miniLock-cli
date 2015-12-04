@@ -7,7 +7,7 @@
     "email": "manish.jethani@gmail.com",
     "url": "http://manishjethani.com/"
   },
-  "homepage": "http://mjethani.github.io/miniLock-cli",
+  "homepage": "http://mjethani.github.io/miniLock-cli/",
   "bin": {
     "mlck": "./mlck"
   },
