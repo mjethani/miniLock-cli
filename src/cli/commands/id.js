@@ -40,7 +40,7 @@ function saveId(email, id, keyPair) {
         'profile.json'))
 }
 
-export default function () {
+export function execute(args) {
   const defaultOptions = {
     'email':           null,
     'passphrase':      null,
@@ -55,7 +55,7 @@ export default function () {
     '-P': '--passphrase=',
   }
 
-  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
+  const options = parseArgs(args, defaultOptions, shortcuts)
 
   if (options['!?'].length > 0) {
     handleUnknownOption(options['!?'][0], Object.keys(defaultOptions))

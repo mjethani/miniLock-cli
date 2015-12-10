@@ -55,7 +55,7 @@ function encryptFile(keyPair, file, outputFile, ids,
   })
 }
 
-export default function () {
+export function execute(args) {
   const defaultOptions = {
     'email':           null,
     'passphrase':      null,
@@ -75,7 +75,7 @@ export default function () {
     '-a': '--armor',
   }
 
-  const options = parseArgs(process.argv.slice(3), defaultOptions, shortcuts)
+  const options = parseArgs(args, defaultOptions, shortcuts)
 
   if (options['!?'].length > 0) {
     handleUnknownOption(options['!?'][0], Object.keys(defaultOptions))

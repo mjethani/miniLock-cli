@@ -1,6 +1,6 @@
 import version from '../../common/version'
 
-export default function () {
+export function execute() {
   console.log(`miniLock-cli v${version}`)
 }
 

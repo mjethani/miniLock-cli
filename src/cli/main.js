@@ -5,9 +5,9 @@ import { setDebugFunc } from '../common/debug'
 import { handleUnknownCommand, handleUnknownOption } from './helpers/unknown'
 
 function handleCommand(command) {
-  const func = require(`./commands/${command}`)
+  const args = process.argv[2].slice(0, 2) === '--' ? [] : process.argv.slice(3)
 
-  func()
+  require(`./commands/${command}`).execute(args)
 }
 
 export function run() {
