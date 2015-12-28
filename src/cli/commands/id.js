@@ -7,7 +7,7 @@ import { die, home, logError, parseArgs } from '../../common/util'
 
 import debug from '../../common/debug'
 
-import { Profile } from '../objects/profile'
+import Profile from '../objects/profile'
 
 import { generateId } from '../helpers/id'
 import { readPassphrase } from '../helpers/passphrase'

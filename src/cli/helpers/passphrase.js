@@ -4,7 +4,7 @@ import zxcvbn from 'zxcvbn'
 
 import { prompt } from '../../common/util'
 
-import { Dictionary } from '../objects/dictionary'
+import Dictionary from '../objects/dictionary'
 
 let dictionary = null
 

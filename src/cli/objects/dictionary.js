@@ -3,7 +3,7 @@ import fs     from 'fs'
 
 const words_ = Symbol()
 
-export class Dictionary {
+export default class Dictionary {
   static loadFromFile(filename) {
     const data = fs.readFileSync(filename, { encoding: 'utf8' })
 

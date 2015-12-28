@@ -2,7 +2,7 @@ import path from 'path'
 
 import { home } from '../../common/util'
 
-import { Profile } from '../objects/profile'
+import Profile from '../objects/profile'
 
 let profile = null
 

@@ -5,7 +5,7 @@ const VERSION = '0.1'
 
 const data_ = Symbol()
 
-export class Profile {
+export default class Profile {
   static loadFromFile(filename) {
     return new Profile(fs.readFileSync(filename, { encoding: 'utf8' }))
   }
