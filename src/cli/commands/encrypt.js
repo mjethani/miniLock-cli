@@ -14,7 +14,7 @@ import { getProfile } from '../helpers/profile'
 import { handleUnknownOption } from '../helpers/unknown'
 
 function encryptFile(keyPair, file, outputFile, ids,
-    { armor, includeSelf }={}) {
+    { armor, includeSelf } = {}) {
   return new Promise((resolve, reject) => {
     if (typeof file !== 'string' && process.stdin.isTTY) {
       console.error('Reading from stdin ...')

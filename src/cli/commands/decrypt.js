@@ -11,7 +11,7 @@ import { readPassphrase } from '../helpers/passphrase'
 import { getProfile } from '../helpers/profile'
 import { handleUnknownOption } from '../helpers/unknown'
 
-function decryptFile(keyPair, file, outputFile, { armor }={}) {
+function decryptFile(keyPair, file, outputFile, { armor } = {}) {
   return new Promise((resolve, reject) => {
     if (typeof file !== 'string' && process.stdin.isTTY) {
       console.error('Reading from stdin ...')
@@ -38,7 +38,7 @@ function decryptFile(keyPair, file, outputFile, { armor }={}) {
         before: '\n--- BEGIN MESSAGE ---\n',
         after:  '\n--- END MESSAGE ---\n'
       }
-    }, (error, outputByteCount, { senderId, originalFilename }={}) => {
+    }, (error, outputByteCount, { senderId, originalFilename } = {}) => {
       if (error) {
         reject(error)
       } else {
@@ -148,7 +148,7 @@ export function execute(args) {
     return decryptFile(keyPair, file, outputFile, { armor })
 
   }).then(([ outputByteCount, outputFilename,
-        { senderId, originalFilename }={} ]) => {
+        { senderId, originalFilename } = {} ]) => {
     debug('File decryption complete')
 
     if (process.stdout.isTTY) {

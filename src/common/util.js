@@ -29,7 +29,7 @@ export function stringDistance(s, t) {
 }
 
 export function findCloseMatches(string, candidateList,
-    { distanceThreshold=1 }={}) {
+    { distanceThreshold = 1 } = {}) {
   const matches = candidateList.map(candidate => {
     // Split candidate into individual components. e.g. 'output-file' becomes a
     // list containing 'output', 'file', and 'output-file'.
@@ -239,7 +239,7 @@ export function home() {
   return process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME']
 }
 
-export function streamHash(stream, algorithm, { encoding }={}) {
+export function streamHash(stream, algorithm, { encoding } = {}) {
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash(algorithm)
 

@@ -272,7 +272,7 @@ function decryptChunk(chunk, decryptor, output, hash) {
 }
 
 export function encryptStream(keyPair, inputStream, outputStream, ids,
-    { filename, armor, includeSelf }={}, callback) {
+    { filename, armor, includeSelf } = {}, callback) {
   const browser = isBrowser()
 
   const fromId = miniLockId(keyPair.publicKey)
@@ -476,7 +476,7 @@ export function encryptStream(keyPair, inputStream, outputStream, ids,
 }
 
 export function decryptStream(keyPair, inputStream, outputStream,
-    { armor, envelope }={}, callback) {
+    { armor, envelope } = {}, callback) {
   const browser = isBrowser()
 
   const toId = miniLockId(keyPair.publicKey)

@@ -36,7 +36,7 @@ function randomPassphrase(entropy) {
   return passphrase
 }
 
-export function readPassphrase(minEntropy=100) {
+export function readPassphrase(minEntropy = 100) {
   return new Promise((resolve, reject) => {
     if (minEntropy) {
       // Display a dictionary-based random passphrase as a hint/suggestion.

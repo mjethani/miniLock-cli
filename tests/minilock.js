@@ -115,7 +115,7 @@ test('Encrypt a message to self and decrypt it', t => {
     decrypted.setEncoding('utf8')
 
     miniLock.decryptStream(aliceKeyPair, encrypted, decrypted, {},
-        (error, outputByteCount, { senderId }={}) => {
+        (error, outputByteCount, { senderId } = {}) => {
       if (error) {
         t.comment(`ERROR: ${error.toString()}`)
 
@@ -157,7 +157,7 @@ test('Encrypt a message with the armor option and decrypt it', t => {
     decrypted.setEncoding('utf8')
 
     miniLock.decryptStream(bobKeyPair, encrypted, decrypted, { armor: true },
-        (error, outputByteCount, { senderId }={}) => {
+        (error, outputByteCount, { senderId } = {}) => {
       if (error) {
         t.comment(`ERROR: ${error.toString()}`)
 
@@ -200,7 +200,7 @@ test('Encrypt a file and decrypt it', t => {
     const decrypted = new BufferStream(null, null, { highWaterMark: 0x100000 })
 
     miniLock.decryptStream(bobKeyPair, encrypted, decrypted, {},
-        (error, outputByteCount, { senderId, originalFilename }={}) => {
+        (error, outputByteCount, { senderId, originalFilename } = {}) => {
       if (error) {
         t.comment(`ERROR: ${error.toString()}`)
 
