@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import path   from 'path'
 
-import * as minilock from '../../module'
+import * as miniLock from '../../module'
 
 import { die, home, logError, parseArgs } from '../../common/util'
 
@@ -30,7 +30,7 @@ function saveId(email, id, keyPair) {
   if (keyPair) {
     // Store only the secret key. If it's compromised, you have to get a new
     // one. No other information is leaked.
-    data.secret = minilock.miniLockId(keyPair.secretKey)
+    data.secret = miniLock.miniLockId(keyPair.secretKey)
   } else {
     data.email = email
     data.id = id
@@ -111,13 +111,13 @@ export function execute(args) {
     })
 
   } else if (typeof secret === 'string') {
-    const keyPair = minilock.keyPairFromSecret(secret)
+    const keyPair = miniLock.keyPairFromSecret(secret)
 
     if (saveKey) {
       saveId(null, null, keyPair)
     }
 
-    printId(minilock.miniLockId(keyPair.publicKey))
+    printId(miniLock.miniLockId(keyPair.publicKey))
 
   } else {
     const profile = getProfile()
@@ -125,9 +125,9 @@ export function execute(args) {
     if (profile && profile.id) {
       printId(profile.id)
     } else if (profile && profile.secret) {
-      const keyPair = minilock.keyPairFromSecret(profile.secret)
+      const keyPair = miniLock.keyPairFromSecret(profile.secret)
 
-      printId(minilock.miniLockId(keyPair.publicKey))
+      printId(miniLock.miniLockId(keyPair.publicKey))
     } else {
       console.error('No profile data available.')
     }

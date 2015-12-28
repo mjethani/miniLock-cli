@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import fs     from 'fs'
 import path   from 'path'
 
-import * as minilock from '../../module'
+import * as miniLock from '../../module'
 
 import { die, hex, logError, parseArgs } from '../../common/util'
 
@@ -41,7 +41,7 @@ function encryptFile(keyPair, file, outputFile, ids,
       ? fs.createWriteStream(outputFilename) : armor || !process.stdout.isTTY
       ? process.stdout : null
 
-    minilock.encryptStream(keyPair, inputStream, outputStream, ids, {
+    miniLock.encryptStream(keyPair, inputStream, outputStream, ids, {
       filename: typeof file === 'string' ? path.basename(file) : null,
       armor,
       includeSelf
@@ -95,7 +95,7 @@ export function execute(args) {
   } = options
 
   for (let id of ids) {
-    if (!minilock.validateId(id)) {
+    if (!miniLock.validateId(id)) {
       die(`${id} doesn't look like a valid miniLock ID.`)
     }
   }
@@ -109,7 +109,7 @@ export function execute(args) {
   }
 
   let keyPair = !anonymous && typeof email !== 'string' && secret &&
-    minilock.keyPairFromSecret(secret)
+    miniLock.keyPairFromSecret(secret)
 
   if (!keyPair) {
     if (typeof email !== 'string' && profile) {
@@ -154,7 +154,7 @@ export function execute(args) {
 
     } else {
       return Promise.resolve([
-        minilock.miniLockId(keyPair.publicKey),
+        miniLock.miniLockId(keyPair.publicKey),
         keyPair
       ])
     }
@@ -181,7 +181,7 @@ export function execute(args) {
     if (process.stdout.isTTY) {
       console.log()
       console.log(`Encrypted from` +
-          ` ${minilock.miniLockId(keyPair.publicKey)}.`)
+          ` ${miniLock.miniLockId(keyPair.publicKey)}.`)
       console.log()
 
       if (typeof outputFilename === 'string') {

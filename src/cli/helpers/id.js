@@ -1,9 +1,9 @@
-import * as minilock from '../../module'
+import * as miniLock from '../../module'
 
 export function generateId(email, passphrase) {
   return new Promise(resolve => {
-    minilock.getKeyPair(passphrase, email, keyPair => {
-      resolve([ minilock.miniLockId(keyPair.publicKey), keyPair ])
+    miniLock.getKeyPair(passphrase, email, keyPair => {
+      resolve([ miniLock.miniLockId(keyPair.publicKey), keyPair ])
     })
   })
 }

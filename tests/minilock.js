@@ -5,7 +5,7 @@ import test from 'tape'
 
 import BufferStream from 'node-bufferstream'
 
-import * as minilock from '../module'
+import * as miniLock from '../module'
 
 import { arrayCompare, streamHash } from '../build/common/util'
 
@@ -54,7 +54,7 @@ const bobId = 'gT1csvpmQDNRQSMkqc1Sz7ZWYzGZkmedPKEpgqjdNTy7Y'
 const bobSecret = '2AXYnJ54waq3c1wxpGJoVqrWDN1j1HHbDfbp7HSkDyfj2A'
 
 test('Generate a key pair from an email address and a passphrase', t => {
-  minilock.getKeyPair(alicePassphrase, aliceEmail, keyPair => {
+  miniLock.getKeyPair(alicePassphrase, aliceEmail, keyPair => {
     t.ok(arrayCompare(keyPair.secretKey, aliceKeyPair.secretKey),
         'Secret key should be correct')
     t.ok(arrayCompare(keyPair.publicKey, aliceKeyPair.publicKey),
@@ -65,7 +65,7 @@ test('Generate a key pair from an email address and a passphrase', t => {
 })
 
 test('Convert a public key into a miniLock ID', t => {
-  const id = minilock.miniLockId(aliceKeyPair.publicKey)
+  const id = miniLock.miniLockId(aliceKeyPair.publicKey)
 
   t.ok(id === aliceId, 'ID should be correct')
 
@@ -73,7 +73,7 @@ test('Convert a public key into a miniLock ID', t => {
 })
 
 test('Convert a miniLock ID into a key', t => {
-  const key = minilock.keyFromId(aliceId)
+  const key = miniLock.keyFromId(aliceId)
 
   t.ok(arrayCompare(key, aliceKeyPair.publicKey), 'Key should be correct')
 
@@ -81,7 +81,7 @@ test('Convert a miniLock ID into a key', t => {
 })
 
 test('Convert a secret into a key pair', t => {
-  const keyPair = minilock.keyPairFromSecret(aliceSecret)
+  const keyPair = miniLock.keyPairFromSecret(aliceSecret)
 
   t.ok(arrayCompare(keyPair.secretKey, aliceKeyPair.secretKey),
       'Secret key should be correct')
@@ -96,7 +96,7 @@ test('Encrypt a message to self and decrypt it', t => {
 
   const encrypted = new BufferStream()
 
-  minilock.encryptStream(aliceKeyPair, new BufferStream(message), encrypted,
+  miniLock.encryptStream(aliceKeyPair, new BufferStream(message), encrypted,
       [], { includeSelf: true },
       (error, outputByteCount) => {
     if (error) {
@@ -114,7 +114,7 @@ test('Encrypt a message to self and decrypt it', t => {
 
     decrypted.setEncoding('utf8')
 
-    minilock.decryptStream(aliceKeyPair, encrypted, decrypted, {},
+    miniLock.decryptStream(aliceKeyPair, encrypted, decrypted, {},
         (error, outputByteCount, { senderId }={}) => {
       if (error) {
         t.comment(`ERROR: ${error.toString()}`)
@@ -138,7 +138,7 @@ test('Encrypt a message with the armor option and decrypt it', t => {
 
   const encrypted = new BufferStream()
 
-  minilock.encryptStream(aliceKeyPair, new BufferStream(message), encrypted,
+  miniLock.encryptStream(aliceKeyPair, new BufferStream(message), encrypted,
       [ bobId ], { armor: true },
       (error, outputByteCount) => {
     if (error) {
@@ -156,7 +156,7 @@ test('Encrypt a message with the armor option and decrypt it', t => {
 
     decrypted.setEncoding('utf8')
 
-    minilock.decryptStream(bobKeyPair, encrypted, decrypted, { armor: true },
+    miniLock.decryptStream(bobKeyPair, encrypted, decrypted, { armor: true },
         (error, outputByteCount, { senderId }={}) => {
       if (error) {
         t.comment(`ERROR: ${error.toString()}`)
@@ -182,7 +182,7 @@ test('Encrypt a file and decrypt it', t => {
 
   const encrypted = new BufferStream(null, null, { highWaterMark: 0x100000 })
 
-  minilock.encryptStream(aliceKeyPair,
+  miniLock.encryptStream(aliceKeyPair,
       fs.createReadStream(path.resolve('files', filename)), encrypted,
       [ bobId ], { filename },
       (error, outputByteCount) => {
@@ -199,7 +199,7 @@ test('Encrypt a file and decrypt it', t => {
 
     const decrypted = new BufferStream(null, null, { highWaterMark: 0x100000 })
 
-    minilock.decryptStream(bobKeyPair, encrypted, decrypted, {},
+    miniLock.decryptStream(bobKeyPair, encrypted, decrypted, {},
         (error, outputByteCount, { senderId, originalFilename }={}) => {
       if (error) {
         t.comment(`ERROR: ${error.toString()}`)

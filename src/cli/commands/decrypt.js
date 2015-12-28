@@ -1,6 +1,6 @@
 import fs from 'fs'
 
-import * as minilock from '../../module'
+import * as miniLock from '../../module'
 
 import { die, hex, logError, parseArgs } from '../../common/util'
 
@@ -32,7 +32,7 @@ function decryptFile(keyPair, file, outputFile, { armor }={}) {
     const outputStream = typeof outputFilename === 'string'
       ? fs.createWriteStream(outputFilename) : process.stdout
 
-    minilock.decryptStream(keyPair, inputStream, outputStream, {
+    miniLock.decryptStream(keyPair, inputStream, outputStream, {
       armor,
       envelope: {
         before: '\n--- BEGIN MESSAGE ---\n',
@@ -91,7 +91,7 @@ export function execute(args) {
   }
 
   let keyPair = typeof email !== 'string' && secret &&
-    minilock.keyPairFromSecret(secret)
+    miniLock.keyPairFromSecret(secret)
 
   if (!keyPair) {
     if (typeof email !== 'string' && profile) {
@@ -126,7 +126,7 @@ export function execute(args) {
 
     } else {
       return Promise.resolve([
-        minilock.miniLockId(keyPair.publicKey),
+        miniLock.miniLockId(keyPair.publicKey),
         keyPair
       ])
     }
@@ -168,14 +168,14 @@ export function execute(args) {
     }
 
   }).catch(error => {
-    if (error === minilock.ERR_PARSE_ERROR) {
+    if (error === miniLock.ERR_PARSE_ERROR) {
       console.error('The file appears corrupt.')
-    } else if (error === minilock.ERR_UNSUPPORTED_VERSION) {
+    } else if (error === miniLock.ERR_UNSUPPORTED_VERSION) {
       console.error('This miniLock version is not supported.')
-    } else if (error === minilock.ERR_NOT_A_RECIPIENT) {
+    } else if (error === miniLock.ERR_NOT_A_RECIPIENT) {
       console.error(`The message is not intended for` +
-          ` ${minilock.miniLockId(keyPair.publicKey)}.`)
-    } else if (error === minilock.ERR_MESSAGE_INTEGRITY_CHECK_FAILED) {
+          ` ${miniLock.miniLockId(keyPair.publicKey)}.`)
+    } else if (error === miniLock.ERR_MESSAGE_INTEGRITY_CHECK_FAILED) {
       console.error('The message is corrupt.')
     } else {
       logError(error)
