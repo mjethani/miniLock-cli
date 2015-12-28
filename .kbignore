@@ -2,10 +2,10 @@ node_modules
 Makefile
 .npmignore
 .gitignore
+.babelrc
 .*.tmp
 .*.swp
 *.txt
-*.sh
 *.minilock
 *.log
 

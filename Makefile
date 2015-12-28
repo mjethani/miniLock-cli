@@ -16,7 +16,7 @@ version: $(VERSION)
 
 .npmignore: .gitignore
 	sort -ru .gitignore | grep -v '^build$$' > .npmignore
-	echo '.gitignore .npmignore Makefile *.sh' | tr ' ' '\n' >> .npmignore
+	echo '.gitignore .npmignore .babelrc Makefile' | tr ' ' '\n' >> .npmignore
 
 .kbignore: .npmignore
 	sort -ru .npmignore > .kbignore
@@ -48,4 +48,3 @@ clean:
 	git checkout SIGNED.md
 
 .PHONY: clean version build watch sign verify tag publish
-

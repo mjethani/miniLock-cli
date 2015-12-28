@@ -11,6 +11,12 @@
   "bin": {
     "mlck": "./mlck"
   },
+  "scripts": {
+    "make": "make",
+    "build": "make build",
+    "test": "make test",
+    "watch": "make watch"
+  },
   "keywords": [
     "encryption",
     "minilock"
@@ -29,6 +35,9 @@
     "zxcvbn": "dropbox/zxcvbn.git#063315ee6400116dacbd244f1dc98a54e0c53aec"
   },
   "devDependencies": {
+    "babel-cli": "6.3.17",
+    "babel-preset-es2015": "6.3.13",
+    "babel-tape-runner": "2.0.0",
     "node-bufferstream": "^0.1.1",
     "source-map-support": "^0.3.3",
     "tape": "^4.2.2"
